@@ -1,13 +1,11 @@
 {
-    "name": "Surge.Editor",
-    "rootNamespace": "Surge.Editor",
+    "name": "Surge.Runtime",
+    "rootNamespace": "Surge.Runtime",
     "references": [
         "Surge.Core",
         "Surge.Timing"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

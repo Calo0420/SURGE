@@ -1,10 +1,12 @@
 // ============================================================================
 // SURGE — Editor-side setup verification.
 //
-// Two guards, both runnable from the menu or headless via -executeMethod:
+// Three guards, all runnable from the menu or headless via -executeMethod:
 //   1. Core self-test: proves the locked SurgeCore engine compiles and behaves
 //      identically inside Unity as it does in plain .NET.
-//   2. Render pipeline: proves URP + the 2D Renderer are actually active, not
+//   2. MatchClock self-test: proves game time stays monotonic, freezes without
+//      losing surplus, and is invariant to how real time is chunked.
+//   3. Render pipeline: proves URP + the 2D Renderer are actually active, not
 //      just present in the package manifest. Built-in would silently work
 //      until the first bloom/2D-light pass, which is far too late to find out.
 // ============================================================================
@@ -13,6 +15,7 @@ using System;
 using System.Diagnostics;
 using UnityEditor;
 using UnityEngine;
+using Surge.Timing;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
@@ -46,6 +49,29 @@ namespace Surge.Editor
             {
                 sw.Stop();
                 Debug.LogError($"[Surge] Core self-test FAILED after " +
+                               $"{sw.ElapsedMilliseconds} ms: {e.Message}");
+                return false;
+            }
+        }
+
+        // -------------------------------------------------- clock self-test --
+        [MenuItem("Surge/Verify/Run MatchClock Self-Test", priority = 2)]
+        public static void RunClockSelfTestMenu() => RunClockSelfTest(5000);
+
+        static bool RunClockSelfTest(int cases)
+        {
+            var sw = Stopwatch.StartNew();
+            try
+            {
+                string report = MatchClockSelfTest.Run(cases);
+                sw.Stop();
+                Debug.Log($"[Surge] {report} ({sw.ElapsedMilliseconds} ms)");
+                return true;
+            }
+            catch (Exception e)
+            {
+                sw.Stop();
+                Debug.LogError($"[Surge] MatchClock self-test FAILED after " +
                                $"{sw.ElapsedMilliseconds} ms: {e.Message}");
                 return false;
             }
@@ -109,9 +135,9 @@ namespace Surge.Editor
         }
 
         // ------------------------------------------------------- batch mode --
-        // Project-setup gate only: compilation + render pipeline. Deliberately
-        // excludes the core self-test so the Unity scaffold can be verified
-        // green while the engine's own move-floor defect is outstanding.
+        // Fast gate: compilation + render pipeline only. Skips the simulation
+        // self-tests, which dominate the runtime, so scaffold changes can be
+        // checked quickly. Use CI for the full gate.
         //   Unity -batchmode -nographics -quit -projectPath . \
         //         -executeMethod Surge.Editor.SurgeSetupVerification.Setup
         public static void Setup()
@@ -125,8 +151,7 @@ namespace Surge.Editor
             EditorApplication.Exit(ok ? 0 : 1);
         }
 
-        // Full gate: setup + engine. Expected to FAIL until the move-floor
-        // repair defect in Core/SurgeCore.cs is resolved by the Core owner.
+        // Full gate: render pipeline + engine + match clock.
         //   Unity -batchmode -nographics -quit -projectPath . \
         //         -executeMethod Surge.Editor.SurgeSetupVerification.CI
         public static void CI()
@@ -137,6 +162,7 @@ namespace Surge.Editor
             else { Debug.LogError($"[Surge] {report}"); ok = false; }
 
             if (!RunSelfTest(2000)) ok = false;
+            if (!RunClockSelfTest(5000)) ok = false;
 
             Debug.Log(ok ? "[Surge] Setup verification PASSED."
                          : "[Surge] Setup verification FAILED.");
