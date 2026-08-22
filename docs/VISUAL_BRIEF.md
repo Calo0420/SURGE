@@ -1,5 +1,26 @@
 # SURGE — Visual Direction & Asset Brief (for Copilot / Unity work)
 
+## Project setup (do this before anything else)
+
+**Template: 2D. Render pipeline: URP — not Built-in.**
+
+This is a flat grid game, so the 2D template is correct (orthographic
+camera, sprite-focused defaults). The pipeline choice underneath it is
+what actually matters and is easy to get wrong by not thinking about it:
+Unity's plain "2D" template can default to the older Built-in Render
+Pipeline if URP isn't picked explicitly at project creation.
+
+Tap Rush is believed to be on Built-in, which is very likely why it
+couldn't easily add real post-processing later — Built-in makes bloom,
+glow, and color grading clunky to bolt on after the fact, and Unity is
+deprecating it in favor of URP going forward anyway.
+
+For Surge specifically, given the neon/glow/bloom direction below, URP is
+non-negotiable: it's what makes Bloom a simple Volume component and gives
+proper 2D Lights for the glow effect, instead of faking it with sprite
+tricks. Set this at project creation — migrating pipelines mid-project is
+a real, avoidable pain, not a checkbox to flip later.
+
 Goal: premium-feeling neon arcade puzzle screen, built mostly from free Asset
 Store sourcing + iteration, not from a big art budget. The budget is time
 (Copilot/agent cycles) and taste (iteration passes), not dollars.
