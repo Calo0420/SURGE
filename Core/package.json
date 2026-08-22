@@ -1,6 +1,6 @@
 {
   "name": "com.reyeso.surge.core",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "displayName": "Surge Core",
   "description": "Deterministic, Unity-free match engine for SURGE. Contract: final state = f(matchSeed, config, ordered action list). LOCKED — see docs/DESIGN_LINEAGE.md. File change requests; do not edit SurgeCore.cs directly.",
   "unity": "6000.5",
