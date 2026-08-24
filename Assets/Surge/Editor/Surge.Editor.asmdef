@@ -1,0 +1,19 @@
+{
+    "name": "Surge.Editor",
+    "rootNamespace": "Surge.Editor",
+    "references": [
+        "Surge.Core",
+        "Surge.Timing"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

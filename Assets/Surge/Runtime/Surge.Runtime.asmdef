@@ -1,0 +1,17 @@
+{
+    "name": "Surge.Runtime",
+    "rootNamespace": "Surge.Runtime",
+    "references": [
+        "Surge.Core",
+        "Surge.Timing"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

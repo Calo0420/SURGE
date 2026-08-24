@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Headless self-test harness for the locked Surge engine.
+
+    Compiles Core/SurgeCore.cs directly — no Unity, no license, no editor.
+    This is possible only because Surge.Core.asmdef sets noEngineReferences,
+    so the engine can never acquire a UnityEngine dependency. If this project
+    ever stops building, the engine has stopped being Unity-free.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>SurgeCore.SelfTest</AssemblyName>
+    <RootNamespace>Surge.Ci</RootNamespace>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Core/SurgeCore.cs" Link="SurgeCore.cs" />
+  </ItemGroup>
+
+</Project>
