@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1eb3be7fb35ac5b48a4fde8a0181a313
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Documentation/Simple Object Pooler Doc.pdf
+  uploadId: 476966

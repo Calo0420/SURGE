@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: ab729a20b8e8b634db8b6516670bacdc
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Materials/Prototype Grid/Read Me.txt
+  uploadId: 476966

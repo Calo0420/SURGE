@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4a72ea37379b9c54180ac9535b846494
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Materials/Floor Material.mat
+  uploadId: 476966

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e1d0bcb97f59df14b887db587bd1c686
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Materials/TurretMaterial.mat
+  uploadId: 476966

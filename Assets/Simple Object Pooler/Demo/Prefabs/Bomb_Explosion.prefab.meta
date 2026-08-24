@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b730832d6de07f34a854240e0ca8a555
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Prefabs/Bomb_Explosion.prefab
+  uploadId: 476966

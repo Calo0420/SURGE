@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 17542a8f25df4fefa707600255b85b16
+timeCreated: 1643135492
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/ObjectPooler Scripts/Components/PoolHolderObject.cs
+  uploadId: 476966

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7592c2eff55e1c74ba4399cf482ab57a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Prefabs/BulletExplosion_Red.prefab
+  uploadId: 476966

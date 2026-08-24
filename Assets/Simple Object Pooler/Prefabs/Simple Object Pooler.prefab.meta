@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f199120b5031f37418b2cb0905eb0252
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Prefabs/Simple Object Pooler.prefab
+  uploadId: 476966

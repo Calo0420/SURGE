@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 0643e95fd5cbbd54a8894cd1b6572cc3
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Prefabs/Bullet_Yellow.prefab
+  uploadId: 476966

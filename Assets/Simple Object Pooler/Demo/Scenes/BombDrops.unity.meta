@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 357375b2e533344408ff7a28b6a0e1b9
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Scenes/BombDrops.unity
+  uploadId: 476966

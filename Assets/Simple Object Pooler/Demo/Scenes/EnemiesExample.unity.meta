@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d6134e4855464654e8c1035379c7e350
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Scenes/EnemiesExample.unity
+  uploadId: 476966

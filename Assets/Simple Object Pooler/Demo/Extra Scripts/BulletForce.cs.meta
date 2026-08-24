@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5bbc6413a0dd05f4fa3af5361a3404ba
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Extra Scripts/BulletForce.cs
+  uploadId: 476966

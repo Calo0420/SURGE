@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 6a0e1c3c0e7575b46912ad9b7e2ac20f
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Prefabs/Enemy.prefab
+  uploadId: 476966

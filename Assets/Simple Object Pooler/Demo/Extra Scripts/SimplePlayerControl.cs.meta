@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: ff08c2637a41cf940a0aacceff800269
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Extra Scripts/SimplePlayerControl.cs
+  uploadId: 476966

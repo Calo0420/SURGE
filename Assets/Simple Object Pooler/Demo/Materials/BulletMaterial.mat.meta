@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3b26ec3300180444fb48dbda8b20fbce
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Materials/BulletMaterial.mat
+  uploadId: 476966

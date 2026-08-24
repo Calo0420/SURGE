@@ -54,3 +54,10 @@ bin/
 
 # ------------------------------------------------------------- macOS --
 .DS_Store
+
+# Showroom/demo assets from imported packs (large, not needed for gameplay)
+Assets/_Creepy_Cat/*/_Showroom/
+Assets/GabrielAguiarProductions/*.unitypackage
+Assets/YughuesFreeMetalMaterials/*.unitypackage
+# Large textures
+*.tif

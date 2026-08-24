@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 099298a2b267e2145b1cbdc7b6cca874
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 191444
+  packageName: Simple Object Pooler
+  packageVersion: 1.1
+  assetPath: Assets/Simple Object Pooler/Demo/Prefabs/EnemyExplosion.prefab
+  uploadId: 476966
