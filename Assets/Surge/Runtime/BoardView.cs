@@ -48,6 +48,7 @@ namespace Surge.Runtime
         byte[] _shown;
         MatchDriver _driver;
         Sprite _generated;
+        Material _nodeMaterial;
 
         /// Raised after every applied change, with the classified diff. The
         /// same BoardDelta instance is reused each time — read it inside the
@@ -98,6 +99,19 @@ namespace Surge.Runtime
                 sr.sprite = sprite;
                 sr.sortingLayerName = sortingLayerName;
                 sr.sortingOrder = sortingOrder;
+
+                // AddComponent<SpriteRenderer> silently inherits URP 2D's default
+                // material, which is Sprite-Lit-Default — that multiplies every
+                // node colour by the scene's Global Light 2D before it ever
+                // reaches Bloom/Tonemapping, crushing the HDR palette and
+                // tinting it toward whatever colour that light happens to be.
+                // The mockup art Calo approved by eye uses Unlit materials with
+                // no such dependency, so the live nodes must match that: an
+                // explicit Unlit sprite material, not an implicit lit default.
+                if (_nodeMaterial == null)
+                    _nodeMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
+                sr.sharedMaterial = _nodeMaterial;
+
                 _nodes[i] = sr;
             }
         }
