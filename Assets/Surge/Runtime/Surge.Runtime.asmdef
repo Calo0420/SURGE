@@ -3,7 +3,8 @@
     "rootNamespace": "Surge.Runtime",
     "references": [
         "Surge.Core",
-        "Surge.Timing"
+        "Surge.Timing",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
