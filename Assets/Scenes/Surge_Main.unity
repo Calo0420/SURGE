@@ -1187,8 +1187,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::VFXManager
   clearBurstPrefab: {fileID: 7872766456981535615, guid: 47449c51bc26d483fbf342e6b690b4ff, type: 3}
   sparkStreakPrefab: {fileID: 3833040092440716094, guid: 5dbc7c1515e724371b480bcfeee1ce74, type: 3}
+  shieldPrefab: {fileID: 907283340215288225, guid: e6e9b2066b2b94121871b5f4ccc569e1, type: 3}
+  electricityPrefab: {fileID: 6062144377619344749, guid: b63be21c8fe27473a9712b5df008fff9, type: 3}
+  ambientPrefab: {fileID: 5341423162265890587, guid: af2e007db8d3f4a03af59a75bfe086f9, type: 3}
   palette: {fileID: 11400000, guid: 48efbdc5c980e493db65a1f6f94d2658, type: 2}
   initialBurstPoolSize: 12
+  initialShieldPoolSize: 4
+  initialElectricityPoolSize: 8
   burstHdrIntensity: 2
 --- !u!114 &1681125875
 MonoBehaviour:

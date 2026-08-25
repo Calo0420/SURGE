@@ -7,17 +7,25 @@ public sealed class VFXManager : MonoBehaviour
     [Header("Prefabs")]
     [SerializeField] private VFXFrameAnimator clearBurstPrefab;
     [SerializeField] private VFXSparkStreakController sparkStreakPrefab;
+    [SerializeField] private VFXShieldController shieldPrefab;
+    [SerializeField] private VFXElectricityController electricityPrefab;
+    [SerializeField] private VFXAmbientController ambientPrefab;
 
     [Header("Palette")]
     [SerializeField] private SurgePalette palette;
 
     [Header("Pool")]
     [SerializeField] private int initialBurstPoolSize = 12;
+    [SerializeField] private int initialShieldPoolSize = 4;
+    [SerializeField] private int initialElectricityPoolSize = 8;
 
     [Header("Tuning")]
     [SerializeField] private float burstHdrIntensity = 2.0f;
 
     private SimpleVFXPool burstPool;
+    private CallbackVFXPool<VFXShieldController> shieldPool;
+    private CallbackVFXPool<VFXElectricityController> electricityPool;
+    private VFXAmbientController ambientInstance;
 
     private void Awake()
     {
@@ -36,6 +44,39 @@ public sealed class VFXManager : MonoBehaviour
         }
 
         burstPool = new SimpleVFXPool(clearBurstPrefab, initialBurstPoolSize, transform);
+
+        if (shieldPrefab != null)
+        {
+            shieldPool = new CallbackVFXPool<VFXShieldController>(
+                shieldPrefab, initialShieldPoolSize, transform,
+                (instance, cb) => instance.InitializePool(cb));
+        }
+        else
+        {
+            Debug.LogWarning($"{nameof(VFXManager)} has no shieldPrefab assigned; Surge/Purge/Combo VFX will be skipped.", this);
+        }
+
+        if (electricityPrefab != null)
+        {
+            electricityPool = new CallbackVFXPool<VFXElectricityController>(
+                electricityPrefab, initialElectricityPoolSize, transform,
+                (instance, cb) => instance.InitializePool(cb));
+        }
+        else
+        {
+            Debug.LogWarning($"{nameof(VFXManager)} has no electricityPrefab assigned; chain link VFX will be skipped.", this);
+        }
+
+        if (ambientPrefab != null)
+        {
+            ambientInstance = Instantiate(ambientPrefab, transform);
+            ambientInstance.Initialize(palette != null ? palette.hudPrimary : Color.white);
+            ambientInstance.StartAmbient();
+        }
+        else
+        {
+            Debug.LogWarning($"{nameof(VFXManager)} has no ambientPrefab assigned; ambient background VFX will be skipped.", this);
+        }
     }
 
     public void SpawnClearBurst(Vector3 worldPosition, SurgeVfxColor colorId)
@@ -69,6 +110,70 @@ public sealed class VFXManager : MonoBehaviour
         streak.EmitSparks(worldPosition, direction, GetPaletteColor(colorId), count);
         Destroy(streak.gameObject, 2f);
     }
+
+
+    /// <summary>Surge Mode activation: full-scale Shield pulse in the palette's accent (pink) color.</summary>
+    public void PlaySurgeActivation(Vector3 worldPosition)
+    {
+        PlayShield(worldPosition, SurgeVfxColor.NeonPink, localScale: 1f, simSpeed: 1f);
+    }
+
+    /// <summary>Purge Freeze: mid-scale Shield flash in blue.</summary>
+    public void PlayPurgeFreeze(Vector3 worldPosition)
+    {
+        PlayShield(worldPosition, SurgeVfxColor.NeonBlue, localScale: 0.6f, simSpeed: 1f);
+    }
+
+    /// <summary>Combo multiplier pop: small, fast Shield flash in yellow.</summary>
+    public void PlayComboPop(Vector3 worldPosition)
+    {
+        PlayShield(worldPosition, SurgeVfxColor.NeonYellow, localScale: 0.3f, simSpeed: 2f);
+    }
+
+    private void PlayShield(Vector3 worldPosition, SurgeVfxColor colorId, float localScale, float simSpeed)
+    {
+        if (shieldPool == null)
+        {
+            Debug.LogError($"{nameof(VFXManager)} shield pool was not initialized.", this);
+            return;
+        }
+
+        VFXShieldController shield = shieldPool.Get();
+        if (shield == null)
+        {
+            Debug.LogError($"{nameof(VFXManager)} failed to get a shield instance from the pool.", this);
+            return;
+        }
+
+        shield.transform.position = worldPosition;
+        shield.Play(GetPaletteColor(colorId), localScale: localScale, simSpeed: simSpeed);
+    }
+
+    /// <summary>Chain/cascade link feedback: electricity arc between two adjacent nodes.</summary>
+    public void PlayChainLink(Vector3 fromPosition, Vector3 toPosition, SurgeVfxColor colorId)
+    {
+        if (electricityPool == null)
+        {
+            Debug.LogError($"{nameof(VFXManager)} electricity pool was not initialized.", this);
+            return;
+        }
+
+        VFXElectricityController arc = electricityPool.Get();
+        if (arc == null)
+        {
+            Debug.LogError($"{nameof(VFXManager)} failed to get an electricity instance from the pool.", this);
+            return;
+        }
+
+        arc.Play(fromPosition, toPosition, colorId);
+    }
+
+    /// <summary>Adjust ambient background VFX intensity (e.g. dimmed during Surge Mode overlay).</summary>
+    public void SetAmbientIntensity(float factor)
+    {
+        ambientInstance?.SetIntensity(factor);
+    }
+
 
     private Color GetPaletteColor(SurgeVfxColor colorId)
     {
