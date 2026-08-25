@@ -1345,6 +1345,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: HUDCanvas
       objectReference: {fileID: 0}
+    - target: {fileID: 2014647171486792436, guid: 6c43dd9216c074a749b4370cc3b18eb5, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8946049891567908112, guid: 6c43dd9216c074a749b4370cc3b18eb5, type: 3}
       propertyPath: m_Camera
       value: 
@@ -1565,9 +1569,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 882245571348873330, guid: 075983cd977064300be6907e0515eb0b, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9152536963511679794, guid: 075983cd977064300be6907e0515eb0b, type: 3}
       propertyPath: m_Name
       value: Board
+      objectReference: {fileID: 0}
+    - target: {fileID: 9152536963511679794, guid: 075983cd977064300be6907e0515eb0b, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
