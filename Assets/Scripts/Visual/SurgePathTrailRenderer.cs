@@ -21,7 +21,7 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
     [SerializeField] private SurgePalette palette;
 
     [Header("Line Tuning")]
-    [SerializeField] private float lineWidth = 0.22f;
+    [SerializeField] private float lineWidth = 0.14f;
     [SerializeField] private float zOffset = -0.05f;
 
     private LineRenderer _line;

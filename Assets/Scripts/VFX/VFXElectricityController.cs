@@ -17,10 +17,10 @@ public sealed class VFXElectricityController : MonoBehaviour
     [SerializeField] private Material matNeonPurple;
 
     [Header("Tuning")]
-    [SerializeField] private float startSize = 0.20f;
-    [SerializeField] private float lifetime = 0.20f;
-    [SerializeField] private int maxParticles = 150;
-    [SerializeField] private float trailWidth = 1.3f;
+    [SerializeField] private float startSize = 0.06f;
+    [SerializeField] private float lifetime = 0.15f;
+    [SerializeField] private int maxParticles = 60;
+    [SerializeField] private float trailWidth = 0.20f;
 
     private ParticleSystem[] childSystems;
     private Coroutine lifetimeRoutine;
@@ -61,7 +61,7 @@ public sealed class VFXElectricityController : MonoBehaviour
 
         // Scale along the connection length
         float distance = Vector3.Distance(fromPosition, toPosition);
-        transform.localScale = new Vector3(1f, distance * 0.5f, 1f);
+        transform.localScale = new Vector3(0.35f, distance * 0.5f, 0.35f);
 
         Material targetMat = GetMaterialForColor(colorId);
         Color targetColor = GetColorForId(colorId);
