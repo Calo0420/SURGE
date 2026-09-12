@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 8946049891567908112}
   - component: {fileID: 871816994126111842}
   - component: {fileID: 3342243809247187680}
+  - component: {fileID: 445566778899001122}
   m_Layer: 0
   m_Name: PF_HUDBaseline
   m_TagString: Untagged
@@ -105,6 +106,25 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &445566778899001122
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2014647171486792436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SurgeHUDController
+  driver: {fileID: 0}
+  scoreText: {fileID: 1293560626591943171}
+  timerText: {fileID: 3016081161148256601}
+  surgeMeterText: {fileID: 2374862593172800801}
+  palette: {fileID: 11400000, guid: 48efbdc5c980e493db65a1f6f94d2658, type: 2}
+  warningTimerColor: {r: 1, g: 0.25, b: 0.25, a: 1}
+  surgeReadyColor: {r: 1, g: 0.85, b: 0.2, a: 1}
 --- !u!1 &2068822911937077946
 GameObject:
   m_ObjectHideFlags: 0

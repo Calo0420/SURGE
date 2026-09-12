@@ -65,10 +65,36 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         }
 
         if (beginMatchOnStart && !driver.MatchRunning)
-            driver.BeginMatch(new TestSeedSource(devSeed));
+        {
+            if (SkillzCrossPlatform.IsMatchInProgress())
+                driver.BeginMatch(new Surge.Skillz.SkillzSeedSource(devSeed));
+            else
+                driver.BeginMatch(new TestSeedSource(devSeed));
+        }
 
         boardView.Bind(driver);
         boardView.SetPalette(BuildColorTable());
+
+        if (SurgeSkillzMatchController.Instance == null)
+        {
+            GameObject skillzGo = new GameObject("SurgeSkillzMatchController");
+            skillzGo.AddComponent<SurgeSkillzMatchController>();
+        }
+
+        if (HapticManager.Instance == null)
+        {
+            GameObject hapticGo = new GameObject("HapticManager");
+            hapticGo.AddComponent<HapticManager>();
+        }
+
+        if (SurgeAudioManager.Instance == null)
+        {
+            GameObject audioGo = new GameObject("SurgeAudioManager");
+            audioGo.AddComponent<SurgeAudioManager>();
+        }
+
+        if (GetComponent<SurgePathTrailRenderer>() == null)
+            gameObject.AddComponent<SurgePathTrailRenderer>();
 
         if (boardInput != null) boardInput.PathCommitted += OnPathCommitted;
     }
@@ -104,14 +130,51 @@ public sealed class SurgeVisualBridge : MonoBehaviour
                                 ToVfxColor(driver.Engine.Board.Cells[b]));
         }
 
-        // NOTE — the remaining moments (Surge activation, purge freeze, combo
-        // pop, chain arcs, ambient) are intentionally not fired here.
-        // VFXShieldController / VFXElectricityController / VFXAmbientController
-        // exist, but VFXManager exposes no pooled entry point for them yet, so
-        // there is nothing to call. Once that API lands, they hook up here:
-        //   result.Purge      -> shield, neonBlue, 0.6 scale, 2x speed
-        //   result.ChainMult  -> shield, neonYellow, 0.3 scale, 2.5x speed
-        //   delta.Fell        -> electricity arcs between linked cells
-        //   delta.Repaired    -> quiet cross-fade only, never a pop
+        // Purge freeze celebration (shield flash in neon blue)
+        if (result.Purge && result.Path != null && result.Path.Length > 0)
+        {
+            Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
+            vfx.PlayPurgeFreeze(center);
+        }
+
+        // Combo pop on multiplier chains
+        if (result.ChainMult > 1 && result.Path != null && result.Path.Length > 0)
+        {
+            Vector3 lastPos = boardView.WorldPositionOf(result.Path[result.Path.Length - 1]);
+            vfx.PlayComboPop(lastPos);
+        }
+
+        // Electricity arcs along cascading cells
+        if (delta.Fell != null && delta.Fell.Count >= 2)
+        {
+            for (int i = 0; i < delta.Fell.Count - 1 && i < 4; i++)
+            {
+                int idxA = delta.Fell[i];
+                int idxB = delta.Fell[i + 1];
+                vfx.PlayChainLink(boardView.WorldPositionOf(idxA), boardView.WorldPositionOf(idxB),
+                                  ToVfxColor(driver.Engine.Board.Cells[idxB]));
+            }
+        }
+    }
+
+    private bool _wasSurgeActive;
+
+    private void Update()
+    {
+        if (driver == null || !driver.MatchRunning) return;
+
+        bool isSurge = driver.SurgeActive;
+        if (isSurge && !_wasSurgeActive)
+        {
+            if (vfx != null)
+                vfx.PlaySurgeActivation(transform.position);
+
+            if (SurgeAudioManager.Instance != null)
+                SurgeAudioManager.Instance.PlaySurgeActivation();
+        }
+        _wasSurgeActive = isSurge;
+
+        if (SurgeAudioManager.Instance != null)
+            SurgeAudioManager.Instance.SetComboMultiplier(driver.Chain);
     }
 }

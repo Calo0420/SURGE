@@ -1,0 +1,6 @@
+framework module GeoComplySDK2110 {
+  umbrella header "GeoComplySDK2110.h"
+  export *
+
+  module * { export * }
+}

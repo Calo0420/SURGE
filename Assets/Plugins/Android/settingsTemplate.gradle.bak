@@ -1,0 +1,29 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+        maven { url 'https://nexus.skillz.com/content/groups/public/' }
+        maven { url 'https://maven.singular.net/' }
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+include ':launcher'
+include ':unityLibrary'
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://nexus.skillz.com/content/groups/public/' }
+        maven { url 'https://maven.singular.net/' }
+        maven { url 'https://jitpack.io' }
+
+        flatDir {
+            dirs "${project(':unityLibrary').projectDir}/libs"
+        }
+    }
+}

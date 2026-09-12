@@ -1,0 +1,6 @@
+framework module GCSDKDomain {
+  umbrella header "GCSDKDomain.h"
+  export *
+
+  module * { export * }
+}

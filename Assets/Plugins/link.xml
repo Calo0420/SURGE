@@ -1,0 +1,5 @@
+<linker>
+  <assembly fullname="SkillzEncryptionUtility">
+    <namespace fullname="SkillzSDK.Internal.Encryption" preserve="all"/>
+  </assembly>
+</linker>

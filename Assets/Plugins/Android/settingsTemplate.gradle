@@ -1,0 +1,34 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        google()
+        mavenCentral()
+        maven { url 'https://nexus.skillz.com/content/groups/public/' }
+        maven { url 'https://maven.singular.net/' }
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+include ':launcher'
+include ':unityLibrary'
+include ':unityLibrary:FirebaseApp.androidlib'
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://nexus.skillz.com/content/groups/public/' }
+        maven { url 'https://maven.singular.net/' }
+        maven { url 'https://jitpack.io' }
+        maven {
+            def unityProjectPath = $/file:///**DIR_UNITYPROJECT**/$.replace("\\", "/")
+            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository")
+        }
+
+        flatDir {
+            dirs "${project(':unityLibrary').projectDir}/libs"
+        }
+    }
+}

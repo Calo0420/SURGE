@@ -27,6 +27,10 @@ namespace Surge.Runtime
     [DisallowMultipleComponent]
     public sealed class MatchDriver : MonoBehaviour
     {
+        [Header("Match Settings")]
+        [Tooltip("Match duration in seconds. Skillz tournament standard is 90s.")]
+        [SerializeField] int matchDurationSeconds = 90;
+
         readonly Stopwatch _realTime = new Stopwatch();
         readonly MatchClock _clock = new MatchClock();
 
@@ -35,6 +39,37 @@ namespace Surge.Runtime
 
         public MatchEngine Engine => _engine;
         public bool MatchRunning => _engine != null;
+
+        public int MatchDurationSeconds
+        {
+            get => matchDurationSeconds;
+            set => matchDurationSeconds = Mathf.Max(1, value);
+        }
+
+        public long MatchDurationMs => matchDurationSeconds * 1000L;
+
+        /// Real milliseconds remaining in the match. Clamped at 0.
+        public long RemainingMs =>
+            _engine == null ? MatchDurationMs : System.Math.Max(0L, MatchDurationMs - NowMs);
+
+        /// Whole seconds remaining in the match (ceiled so 0.1s shows as 1s).
+        public int RemainingSeconds => (int)((RemainingMs + 999L) / 1000L);
+
+        /// 0 at match start, 1 at match end.
+        public float MatchProgress =>
+            MatchDurationMs <= 0 ? 1f : Mathf.Clamp01((float)NowMs / MatchDurationMs);
+
+        /// Current match score from the engine (0 if match not running).
+        public int Score => _engine?.Score ?? 0;
+
+        /// Current Surge meter fill (0..100).
+        public int Meter => _engine?.Meter ?? 0;
+
+        /// Current combo chain multiplier (1..10).
+        public int Chain => _engine?.Chain ?? 1;
+
+        /// Raised when the match clock expires or EndMatch is called.
+        public event System.Action<MatchResult> MatchEnded;
 
         /// Game-clock milliseconds. The single source of "now" for the whole
         /// project. Read this; never UnityEngine.Time.
@@ -69,6 +104,7 @@ namespace Surge.Runtime
             MatchResult result = _engine.Finish();
             _engine = null;
             _realTime.Stop();
+            MatchEnded?.Invoke(result);
             return result;
         }
 
@@ -85,6 +121,12 @@ namespace Surge.Runtime
             // calling it every frame is safe and keeps banked-meter expiry and
             // Surge expiry observable to the UI without extra bookkeeping.
             _engine.Tick(_clock.NowMs);
+
+            // Match countdown expiration (e.g. 90s)
+            if (NowMs >= MatchDurationMs)
+            {
+                EndMatch();
+            }
         }
 
         // ------------------------------------------------------ suspension --
