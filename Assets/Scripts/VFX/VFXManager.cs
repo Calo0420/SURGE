@@ -167,18 +167,8 @@ public sealed class VFXManager : MonoBehaviour
 
     public void SpawnClearBurst(Vector3 worldPosition, SurgeVfxColor colorId)
     {
-        if (burstPool != null)
-        {
-            VFXFrameAnimator burst = burstPool.Get();
-            if (burst != null)
-            {
-                burst.transform.position = worldPosition;
-                burst.Play(GetPaletteColor(colorId), burstHdrIntensity);
-            }
-        }
-
         // High-voltage electric impact burst at the capacitor terminal
-        PlayImpactBurst(worldPosition, colorId, 0.45f);
+        PlayImpactBurst(worldPosition, colorId, 0.55f);
     }
 
     public void EmitSparkStreak(Vector3 worldPosition, Vector2 direction, SurgeVfxColor colorId, int count = 12)

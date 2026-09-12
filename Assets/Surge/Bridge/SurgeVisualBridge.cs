@@ -93,8 +93,10 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             audioGo.AddComponent<SurgeAudioManager>();
         }
 
-        if (GetComponent<SurgePathTrailRenderer>() == null)
-            gameObject.AddComponent<SurgePathTrailRenderer>();
+        var trail = GetComponent<SurgePathTrailRenderer>();
+        if (trail == null)
+            trail = gameObject.AddComponent<SurgePathTrailRenderer>();
+        trail.Initialize(boardInput, boardView, driver, palette);
 
         if (boardInput != null)
         {

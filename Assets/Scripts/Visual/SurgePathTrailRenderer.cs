@@ -25,15 +25,15 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
     [SerializeField] private SurgePalette palette;
 
     [Header("Line Tuning")]
-    [SerializeField] private float lineWidth = 0.14f;
+    [SerializeField] private float lineWidth = 0.085f;
     [SerializeField] private float zOffset = -0.05f;
 
     [Header("Electric Current Tuning")]
     [SerializeField] private int segmentsPerLink = 8;
-    [SerializeField] private float arcDisplacement = 0.11f;
-    [SerializeField] private float arcFrequency = 32f;
-    [SerializeField] private float coreWidthMultiplier = 0.45f;
-    [SerializeField] private float glowWidthMultiplier = 1.6f;
+    [SerializeField] private float arcDisplacement = 0.065f;
+    [SerializeField] private float arcFrequency = 36f;
+    [SerializeField] private float coreWidthMultiplier = 0.38f;
+    [SerializeField] private float glowWidthMultiplier = 1.9f;
 
     private LineRenderer _line;       // Outer glowing neon corona
     private LineRenderer _coreLine;   // Inner white-hot electric plasma core
@@ -43,6 +43,25 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
 
     private Vector3[] _outerPositions = new Vector3[256];
     private Vector3[] _corePositions = new Vector3[256];
+
+    public void Initialize(BoardInputController input, BoardView view, MatchDriver matchDriver, SurgePalette pal)
+    {
+        boardInput = input;
+        boardView = view;
+        driver = matchDriver;
+        palette = pal;
+
+        if (boardInput != null)
+        {
+            boardInput.PathChanged -= OnPathChanged;
+            boardInput.PathCommitted -= OnPathCommitted;
+            boardInput.PathRejected -= OnPathRejected;
+
+            boardInput.PathChanged += OnPathChanged;
+            boardInput.PathCommitted += OnPathCommitted;
+            boardInput.PathRejected += OnPathRejected;
+        }
+    }
 
     private void Awake()
     {
@@ -365,14 +384,27 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
 
     private Color GetColorForCell(byte cellValue)
     {
-        if (palette == null) return Color.cyan;
+        if (palette != null)
+        {
+            return cellValue switch
+            {
+                1 => palette.neonBlue,
+                2 => palette.neonPink,
+                3 => palette.neonGreen,
+                4 => palette.neonYellow,
+                5 => palette.neonPurple,
+                _ => Color.white
+            };
+        }
+
+        // Exact high-voltage fallback palette colors matching SurgePalette
         return cellValue switch
         {
-            1 => palette.neonBlue,
-            2 => palette.neonPink,
-            3 => palette.neonGreen,
-            4 => palette.neonYellow,
-            5 => palette.neonPurple,
+            1 => new Color(0.24f, 0.86f, 1.0f, 1f), // Neon Blue
+            2 => new Color(1.0f, 0.16f, 0.52f, 1f), // Neon Pink
+            3 => new Color(0.22f, 1.0f, 0.45f, 1f), // Neon Green
+            4 => new Color(1.0f, 0.92f, 0.23f, 1f), // Neon Yellow
+            5 => new Color(0.72f, 0.28f, 1.0f, 1f), // Neon Purple
             _ => Color.white
         };
     }
