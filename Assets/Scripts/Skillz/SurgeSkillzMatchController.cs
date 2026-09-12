@@ -73,7 +73,7 @@ public class SurgeSkillzMatchController : MonoBehaviour
     public void OnSkillzMatchWillBegin(SkillzSDK.Match matchInfo)
     {
         _isSkillzMatch = true;
-        Debug.Log($"[Surge] Skillz match will begin. Match ID: {matchInfo?.Id}");
+        Debug.Log($"[Surge] Skillz match will begin. Match ID: {matchInfo?.ID}");
 
         if (driver != null)
         {

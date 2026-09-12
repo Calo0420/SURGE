@@ -1,3 +1,4 @@
+#if UNITY_ANDROID
 using UnityEngine;
 using System;
 using System.Collections;
@@ -55,3 +56,4 @@ namespace SkillzSDK.Internal.API.Android
         }
     }
 }
+#endif

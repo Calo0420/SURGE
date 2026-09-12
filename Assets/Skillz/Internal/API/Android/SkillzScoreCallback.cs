@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
+#if UNITY_ANDROID
 namespace SkillzSDK.Internal.API.Android
 {
     class SkillzScoreCallback : AndroidJavaProxy
@@ -37,3 +38,4 @@ namespace SkillzSDK.Internal.API.Android
         }
     }
 }
+#endif

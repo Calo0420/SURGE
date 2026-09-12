@@ -748,8 +748,10 @@ public static class SkillzCrossPlatform
         }
     }
 
+#if UNITY_ANDROID
     private static AndroidJavaClass GetSkillz()
     {
         return new AndroidJavaClass("com.skillz.Skillz");
     }
+#endif
 }
