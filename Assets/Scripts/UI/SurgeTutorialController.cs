@@ -254,7 +254,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         }
 
         if (SurgeAudioManager.Instance != null)
-            SurgeAudioManager.Instance.PlayHeavyClear();
+            SurgeAudioManager.Instance.PlayClear(5, false);
     }
 
     private void OnPrevClicked()
