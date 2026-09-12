@@ -120,6 +120,15 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             vfx.SpawnClearBurst(boardView.WorldPositionOf(d.Index), ToVfxColor(d.From));
         }
 
+        // Heavy Clear: 5+ nodes detonates lightning arcs and expanding shockwave
+        if (result.Path != null && result.Path.Length >= 5)
+        {
+            Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
+            SurgeVfxColor clearCol = ToVfxColor(delta.Changed.Count > 0 ? delta.Changed[0].From : (byte)1);
+            vfx.PlayLightningBurst(center, clearCol, 0.75f);
+            vfx.PlayShockwave(center, clearCol, 0.9f);
+        }
+
         // A spark streak along the path gives the clear a direction.
         if (result.Path != null && result.Path.Length >= 2)
         {
@@ -130,11 +139,13 @@ public sealed class SurgeVisualBridge : MonoBehaviour
                                 ToVfxColor(driver.Engine.Board.Cells[b]));
         }
 
-        // Purge freeze celebration (shield flash in neon blue)
+        // Purge freeze celebration (EMP Implosion + mega-shockwave in neon blue)
         if (result.Purge && result.Path != null && result.Path.Length > 0)
         {
             Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
             vfx.PlayPurgeFreeze(center);
+            vfx.PlayImplosion(center, SurgeVfxColor.NeonBlue, 1.1f);
+            vfx.PlayShockwave(center, SurgeVfxColor.NeonBlue, 1.4f);
         }
 
         // Combo pop on multiplier chains
@@ -142,6 +153,7 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         {
             Vector3 lastPos = boardView.WorldPositionOf(result.Path[result.Path.Length - 1]);
             vfx.PlayComboPop(lastPos);
+            vfx.PlayShockwave(lastPos, SurgeVfxColor.NeonYellow, 0.5f);
         }
 
         // Electricity arcs along cascading cells
@@ -167,7 +179,11 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         if (isSurge && !_wasSurgeActive)
         {
             if (vfx != null)
+            {
                 vfx.PlaySurgeActivation(transform.position);
+                vfx.PlayShockwave(transform.position, SurgeVfxColor.NeonPink, 1.8f);
+                vfx.PlayLightningBurst(transform.position, SurgeVfxColor.NeonPink, 1.2f);
+            }
 
             if (SurgeAudioManager.Instance != null)
                 SurgeAudioManager.Instance.PlaySurgeActivation();

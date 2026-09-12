@@ -11,6 +11,11 @@ public sealed class VFXManager : MonoBehaviour
     [SerializeField] private VFXElectricityController electricityPrefab;
     [SerializeField] private VFXAmbientController ambientPrefab;
 
+    [Header("High Voltage VFX")]
+    [SerializeField] private GameObject shockwavePrefab;
+    [SerializeField] private GameObject lightningPrefab;
+    [SerializeField] private GameObject implosionPrefab;
+
     [Header("Palette")]
     [SerializeField] private SurgePalette palette;
 
@@ -76,6 +81,57 @@ public sealed class VFXManager : MonoBehaviour
         else
         {
             Debug.LogWarning($"{nameof(VFXManager)} has no ambientPrefab assigned; ambient background VFX will be skipped.", this);
+        }
+
+        // Auto-load high-voltage VFX prefabs from Resources/VFX if not assigned
+        if (shockwavePrefab == null)
+            shockwavePrefab = Resources.Load<GameObject>("VFX/vfx_Shockwave_01");
+        if (lightningPrefab == null)
+            lightningPrefab = Resources.Load<GameObject>("VFX/vfx_Lightning_01");
+        if (implosionPrefab == null)
+            implosionPrefab = Resources.Load<GameObject>("VFX/vfx_Implosion_01");
+    }
+
+    /// <summary>High-voltage lightning burst on node clears (especially 5+ chains)</summary>
+    public void PlayLightningBurst(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 0.65f)
+    {
+        if (lightningPrefab == null) return;
+        GameObject go = Instantiate(lightningPrefab, worldPosition, Quaternion.identity, transform);
+        go.transform.localScale = Vector3.one * scale;
+        Color col = GetPaletteColor(colorId);
+        ApplyVfxColor(go, col);
+        Destroy(go, 1.2f);
+    }
+
+    /// <summary>Expanding neon shockwave ring</summary>
+    public void PlayShockwave(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 0.75f)
+    {
+        if (shockwavePrefab == null) return;
+        GameObject go = Instantiate(shockwavePrefab, worldPosition, Quaternion.identity, transform);
+        go.transform.localScale = Vector3.one * scale;
+        Color col = GetPaletteColor(colorId);
+        ApplyVfxColor(go, col);
+        Destroy(go, 1.5f);
+    }
+
+    /// <summary>Detonates full EMP Implosion for Color Purge</summary>
+    public void PlayImplosion(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 1.0f)
+    {
+        if (implosionPrefab == null) return;
+        GameObject go = Instantiate(implosionPrefab, worldPosition, Quaternion.identity, transform);
+        go.transform.localScale = Vector3.one * scale;
+        Color col = GetPaletteColor(colorId);
+        ApplyVfxColor(go, col);
+        Destroy(go, 2.0f);
+    }
+
+    private void ApplyVfxColor(GameObject root, Color color)
+    {
+        var systems = root.GetComponentsInChildren<ParticleSystem>();
+        foreach (var ps in systems)
+        {
+            var main = ps.main;
+            main.startColor = color;
         }
     }
 

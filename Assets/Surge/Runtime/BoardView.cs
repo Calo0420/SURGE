@@ -45,9 +45,11 @@ namespace Surge.Runtime
 
         readonly BoardDelta _delta = new BoardDelta();
         SpriteRenderer[] _nodes;
+        SpriteRenderer[] _sockets;
         byte[] _shown;
         MatchDriver _driver;
-        Sprite _generated;
+        Sprite _generatedCore;
+        Sprite _generatedSocket;
         Material _nodeMaterial;
 
         /// Raised after every applied change, with the classified diff. The
@@ -84,9 +86,14 @@ namespace Surge.Runtime
 
             Size = size;
             _nodes = new SpriteRenderer[size * size];
+            _sockets = new SpriteRenderer[size * size];
             _shown = new byte[size * size];
 
-            Sprite sprite = nodeSprite != null ? nodeSprite : GeneratedSprite();
+            if (_nodeMaterial == null)
+                _nodeMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
+
+            Sprite coreSprite = nodeSprite != null ? nodeSprite : GeneratedCoreSprite();
+            Sprite socketSprite = GeneratedSocketSprite();
 
             for (int i = 0; i < _nodes.Length; i++)
             {
@@ -95,21 +102,24 @@ namespace Surge.Runtime
                 go.transform.localPosition = LocalPositionOf(i);
                 go.transform.localScale = Vector3.one * nodeScale;
 
+                // 1. Dark titanium cyber socket housing (stays on floor)
+                var socketObj = new GameObject("Socket");
+                socketObj.transform.SetParent(go.transform, false);
+                socketObj.transform.localPosition = Vector3.zero;
+                socketObj.transform.localScale = Vector3.one * 1.05f;
+
+                var socketSr = socketObj.AddComponent<SpriteRenderer>();
+                socketSr.sprite = socketSprite;
+                socketSr.sortingLayerName = sortingLayerName;
+                socketSr.sortingOrder = sortingOrder - 1;
+                socketSr.sharedMaterial = _nodeMaterial;
+                _sockets[i] = socketSr;
+
+                // 2. Glowing cyber capacitor lens (tinted with cell color)
                 var sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = sprite;
+                sr.sprite = coreSprite;
                 sr.sortingLayerName = sortingLayerName;
                 sr.sortingOrder = sortingOrder;
-
-                // AddComponent<SpriteRenderer> silently inherits URP 2D's default
-                // material, which is Sprite-Lit-Default — that multiplies every
-                // node colour by the scene's Global Light 2D before it ever
-                // reaches Bloom/Tonemapping, crushing the HDR palette and
-                // tinting it toward whatever colour that light happens to be.
-                // The mockup art Calo approved by eye uses Unlit materials with
-                // no such dependency, so the live nodes must match that: an
-                // explicit Unlit sprite material, not an implicit lit default.
-                if (_nodeMaterial == null)
-                    _nodeMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
                 sr.sharedMaterial = _nodeMaterial;
 
                 _nodes[i] = sr;
@@ -189,16 +199,16 @@ namespace Surge.Runtime
         }
 
         // ---------------------------------------------------------- sprite --
-        // A soft circle so the board renders before any art is assigned.
-        // Assigning nodeSprite in the inspector overrides it entirely.
-        Sprite GeneratedSprite()
+        // High-resolution procedural Cyber Capacitor terminal and base socket.
+        // Assigning nodeSprite in the inspector overrides the core lens.
+        Sprite GeneratedSocketSprite()
         {
-            if (_generated != null) return _generated;
+            if (_generatedSocket != null) return _generatedSocket;
 
-            const int px = 128;
+            const int px = 256;
             var tex = new Texture2D(px, px, TextureFormat.RGBA32, false)
             {
-                name = "SurgeNode_Generated",
+                name = "SurgeSocket_Generated",
                 wrapMode = TextureWrapMode.Clamp,
                 filterMode = FilterMode.Bilinear
             };
@@ -208,28 +218,140 @@ namespace Surge.Runtime
             for (int y = 0; y < px; y++)
             for (int x = 0; x < px; x++)
             {
-                float dx = x - r + 0.5f, dy = y - r + 0.5f;
-                float d = Mathf.Sqrt(dx * dx + dy * dy) / r;
-                // Solid core, feathered rim: reads as a node at any size and
-                // gives Bloom a clean edge to pick up.
-                float a = Mathf.Clamp01(1f - Mathf.SmoothStep(0.78f, 1f, d));
-                pixels[y * px + x] = new Color32(255, 255, 255, (byte)(a * 255));
+                float dx = (x - r + 0.5f) / r;
+                float dy = (y - r + 0.5f) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+
+                if (d > 1.0f)
+                {
+                    pixels[y * px + x] = new Color32(0, 0, 0, 0);
+                    continue;
+                }
+
+                // Directional lighting from top-left (arcade cabinet overhead light)
+                float light = (-dx * 0.707f + dy * 0.707f);
+                float a = 1f;
+
+                if (d > 0.94f)
+                {
+                    a = Mathf.Clamp01((1f - d) / 0.06f);
+                }
+
+                float shade;
+                if (d >= 0.80f)
+                {
+                    // Outer titanium beveled bezel
+                    shade = Mathf.Lerp(0.20f, 0.48f, (light + 1f) * 0.5f);
+                    // 4 alignment notches at cardinal directions
+                    float angle = Mathf.Abs(Mathf.Atan2(dy, dx));
+                    if (Mathf.Abs(angle) < 0.07f || Mathf.Abs(angle - Mathf.PI * 0.5f) < 0.07f || Mathf.Abs(angle - Mathf.PI) < 0.07f)
+                    {
+                        shade *= 0.4f;
+                    }
+                }
+                else if (d >= 0.70f)
+                {
+                    // Recessed dark trench
+                    shade = 0.05f + 0.04f * (1f - (d - 0.70f) / 0.10f);
+                }
+                else
+                {
+                    // Inner metallic bed
+                    shade = 0.08f + 0.05f * (light + 1f) * 0.5f;
+                }
+
+                byte val = (byte)(Mathf.Clamp01(shade) * 255);
+                byte alpha = (byte)(Mathf.Clamp01(a) * 255);
+                // Subtle cyan tint on the titanium housing
+                pixels[y * px + x] = new Color32((byte)(val * 0.85f), (byte)(val * 0.95f), val, alpha);
             }
             tex.SetPixels32(pixels);
             tex.Apply();
 
-            _generated = Sprite.Create(tex, new Rect(0, 0, px, px),
-                                       new Vector2(0.5f, 0.5f), px);
-            _generated.name = "SurgeNode_Generated";
-            return _generated;
+            _generatedSocket = Sprite.Create(tex, new Rect(0, 0, px, px),
+                                             new Vector2(0.5f, 0.5f), px);
+            _generatedSocket.name = "SurgeSocket_Generated";
+            return _generatedSocket;
+        }
+
+        Sprite GeneratedCoreSprite()
+        {
+            if (_generatedCore != null) return _generatedCore;
+
+            const int px = 256;
+            var tex = new Texture2D(px, px, TextureFormat.RGBA32, false)
+            {
+                name = "SurgeCore_Generated",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            float r = px * 0.5f;
+            var pixels = new Color32[px * px];
+            for (int y = 0; y < px; y++)
+            for (int x = 0; x < px; x++)
+            {
+                float dx = (x - r + 0.5f) / r;
+                float dy = (y - r + 0.5f) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+
+                if (d > 0.85f)
+                {
+                    // Soft outer glow halo
+                    float a = Mathf.Clamp01(1f - (d - 0.85f) / 0.15f);
+                    float glow = a * 0.22f;
+                    byte gb = (byte)(glow * 255);
+                    pixels[y * px + x] = new Color32(gb, gb, gb, gb);
+                    continue;
+                }
+
+                // 1. Neon Energy Ring around rim (0.58 to 0.82)
+                float ring = 0f;
+                if (d >= 0.58f && d <= 0.82f)
+                {
+                    float ringDist = Mathf.Abs(d - 0.70f) / 0.12f;
+                    ring = Mathf.Clamp01(1f - ringDist) * 1.5f;
+                }
+
+                // 2. Convex 3D Spherical Dome Core (0 to 0.65)
+                float coreD = Mathf.Clamp01(d / 0.65f);
+                float dome = Mathf.Cos(coreD * Mathf.PI * 0.5f);
+                float plasmaCenter = Mathf.Exp(-coreD * coreD * 3.8f) * 0.9f;
+
+                // 3. Curved specular glass glint (top-left reflection arc)
+                float glintDx = dx - (-0.20f);
+                float glintDy = dy - (0.22f);
+                float glintDist = Mathf.Sqrt(glintDx * glintDx + glintDy * glintDy);
+                float glint = Mathf.Exp(-glintDist * glintDist * 18f) * 1.25f;
+
+                // Combine:
+                float intensity = dome * 0.60f + plasmaCenter + ring + glint;
+                float alpha = Mathf.Clamp01(Mathf.Max(ring * 0.8f, dome) + glint * 0.6f);
+
+                byte c = (byte)(Mathf.Clamp01(intensity) * 255);
+                byte aByte = (byte)(Mathf.Clamp01(alpha) * 255);
+                pixels[y * px + x] = new Color32(c, c, c, aByte);
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            _generatedCore = Sprite.Create(tex, new Rect(0, 0, px, px),
+                                           new Vector2(0.5f, 0.5f), px);
+            _generatedCore.name = "SurgeCore_Generated";
+            return _generatedCore;
         }
 
         void OnDestroy()
         {
-            if (_generated != null)
+            if (_generatedCore != null)
             {
-                if (_generated.texture != null) Destroy(_generated.texture);
-                Destroy(_generated);
+                if (_generatedCore.texture != null) Destroy(_generatedCore.texture);
+                Destroy(_generatedCore);
+            }
+            if (_generatedSocket != null)
+            {
+                if (_generatedSocket.texture != null) Destroy(_generatedSocket.texture);
+                Destroy(_generatedSocket);
             }
         }
 
