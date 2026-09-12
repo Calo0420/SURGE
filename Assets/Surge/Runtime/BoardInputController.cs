@@ -51,6 +51,7 @@ namespace Surge.Runtime
 
         public IReadOnlyList<int> CurrentPath => _path;
         public bool Dragging => _dragging;
+        public Vector3 CurrentDragWorldPosition { get; private set; }
 
         /// Minimum legal length right now — 2 during Surge, otherwise the
         /// config's MinClearLength.
@@ -90,13 +91,18 @@ namespace Surge.Runtime
             Vector2 screen = pointer.position.ReadValue();
 
             if (pressed && !_dragging) BeginDrag(screen);
-            else if (pressed) ContinueDrag(screen);
+            else if (pressed)
+            {
+                CurrentDragWorldPosition = ScreenToWorld(screen);
+                ContinueDrag(screen);
+            }
             else if (_dragging) EndDrag();
         }
 
         // ------------------------------------------------------------ drag --
         void BeginDrag(Vector2 screen)
         {
+            CurrentDragWorldPosition = ScreenToWorld(screen);
             if (!TryCell(screen, out int cell)) return;
             if (driver.Engine.Board.Cells[cell] == 0) return;
 
@@ -108,6 +114,7 @@ namespace Surge.Runtime
 
         void ContinueDrag(Vector2 screen)
         {
+            CurrentDragWorldPosition = ScreenToWorld(screen);
             if (_path.Count == 0) return;
             if (!TryCell(screen, out int cell)) return;
 
@@ -163,16 +170,19 @@ namespace Surge.Runtime
             PathRejected?.Invoke();
         }
 
+        public Vector3 ScreenToWorld(Vector2 screen)
+        {
+            if (worldCamera == null) return Vector3.zero;
+            Vector3 p = screen;
+            p.z = Mathf.Abs(worldCamera.transform.position.z - (view != null ? view.transform.position.z : 0f));
+            return worldCamera.ScreenToWorldPoint(p);
+        }
+
         bool TryCell(Vector2 screen, out int cell)
         {
             cell = -1;
-            if (worldCamera == null) return false;
-
-            // Orthographic 2D: push the point to the board's own plane before
-            // converting, so a non-zero camera Z does not shift the hit.
-            Vector3 p = screen;
-            p.z = Mathf.Abs(worldCamera.transform.position.z - view.transform.position.z);
-            Vector3 world = worldCamera.ScreenToWorldPoint(p);
+            if (worldCamera == null || view == null) return false;
+            Vector3 world = ScreenToWorld(screen);
             return view.TryCellAt(world, out cell);
         }
     }

@@ -59,7 +59,78 @@ namespace Surge.Runtime
 
         public int Size { get; private set; }
         public float CellSize => cellSize;
+        public float Extent => BoardGeometry.Extent(Size, cellSize);
         public bool Built => _nodes != null;
+
+        readonly List<int> _activePath = new List<int>();
+        bool _pathIsLegal;
+
+        public void HighlightPath(IReadOnlyList<int> path, bool isLegal)
+        {
+            _activePath.Clear();
+            if (path != null)
+            {
+                for (int i = 0; i < path.Count; i++) _activePath.Add(path[i]);
+            }
+            _pathIsLegal = isLegal;
+        }
+
+        private void Update()
+        {
+            if (_nodes == null || _nodes.Length == 0 || _shown == null) return;
+
+            bool hasPath = _activePath.Count > 0;
+            float dt = Time.deltaTime;
+            float lerpSpeed = 22f;
+
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                SpriteRenderer sr = _nodes[i];
+                if (sr == null || !sr.enabled) continue;
+
+                int pathIndex = hasPath ? _activePath.IndexOf(i) : -1;
+                bool inPath = pathIndex >= 0;
+
+                byte cellVal = i < _shown.Length ? _shown[i] : (byte)0;
+                Color baseCol = cellVal < colors.Length ? colors[cellVal] : Color.white;
+
+                float targetScale = nodeScale;
+                Color targetCol = baseCol;
+
+                if (inPath)
+                {
+                    targetScale = _pathIsLegal ? (nodeScale * 1.22f) : (nodeScale * 1.12f);
+
+                    if (_pathIsLegal)
+                    {
+                        float hum = 1f + 0.05f * Mathf.Sin(Time.time * 32f + pathIndex * 0.9f);
+                        targetScale *= hum;
+                        targetCol = baseCol * 1.55f;
+                    }
+                    else
+                    {
+                        targetCol = baseCol * 1.25f;
+                    }
+                }
+                else if (hasPath)
+                {
+                    targetCol = baseCol * 0.55f;
+                    targetScale = nodeScale;
+                }
+                else if (_driver != null && _driver.MatchRunning && _driver.SurgeActive)
+                {
+                    float shimmer = 1.05f + 0.12f * Mathf.Sin(Time.time * 10f + i * 0.5f);
+                    targetCol = baseCol * shimmer;
+                    targetScale = nodeScale * (1f + 0.035f * Mathf.Sin(Time.time * 8f + i * 0.35f));
+                }
+
+                targetCol.a = 1f;
+
+                Transform t = sr.transform;
+                t.localScale = Vector3.Lerp(t.localScale, Vector3.one * targetScale, dt * lerpSpeed);
+                sr.color = Color.Lerp(sr.color, targetCol, dt * lerpSpeed);
+            }
+        }
 
         // ------------------------------------------------------------ setup --
         /// Builds the node grid for the driver's live match. Safe to call
@@ -163,6 +234,7 @@ namespace Surge.Runtime
         {
             if (_driver == null || !_driver.MatchRunning || _nodes == null) return null;
 
+            _activePath.Clear();
             byte[] cells = _driver.Engine.Board.Cells;
             BoardGeometry.Diff(_shown, cells,
                                result?.Path, result?.NewNodes, _delta);

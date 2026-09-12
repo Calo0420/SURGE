@@ -198,7 +198,34 @@ public sealed class VFXManager : MonoBehaviour
     /// <summary>Surge Mode activation: full-scale Shield pulse in the palette's accent (pink) color.</summary>
     public void PlaySurgeActivation(Vector3 worldPosition)
     {
-        PlayShield(worldPosition, SurgeVfxColor.NeonPink, localScale: 1f, simSpeed: 1f);
+        PlayShield(worldPosition, SurgeVfxColor.NeonPink, localScale: 0.65f, simSpeed: 1.5f);
+    }
+
+    /// <summary>
+    /// Crisp cyber-overdrive activation: ripples electric spark streaks along border rails
+    /// and detonates a sleek outer frame shockwave without blocking the board.
+    /// </summary>
+    public void PlaySurgeOverdrive(Vector3 center, float halfExtent = 3.65f)
+    {
+        // 1. Sleek perimeter shockwave around the frame border
+        PlayShockwave(center, SurgeVfxColor.NeonPink, 1.25f);
+
+        // 2. High-speed electrical spark streaks racing across top and bottom rails
+        Vector3 topRail = center + new Vector3(-halfExtent, halfExtent, 0f);
+        Vector3 botRail = center + new Vector3(halfExtent, -halfExtent, 0f);
+        EmitSparkStreak(topRail, Vector2.right, SurgeVfxColor.NeonPink, 16);
+        EmitSparkStreak(botRail, Vector2.left, SurgeVfxColor.NeonPink, 16);
+
+        // 3. Quick electric arcs at the frame corners
+        Vector3 c1 = center + new Vector3(-halfExtent, halfExtent, 0f);
+        Vector3 c2 = center + new Vector3(halfExtent, halfExtent, 0f);
+        Vector3 c3 = center + new Vector3(halfExtent, -halfExtent, 0f);
+        Vector3 c4 = center + new Vector3(-halfExtent, -halfExtent, 0f);
+
+        PlayChainLink(c1, c2, SurgeVfxColor.NeonPink);
+        PlayChainLink(c2, c3, SurgeVfxColor.NeonPink);
+        PlayChainLink(c3, c4, SurgeVfxColor.NeonPink);
+        PlayChainLink(c4, c1, SurgeVfxColor.NeonPink);
     }
 
     /// <summary>Purge Freeze: mid-scale Shield flash in blue.</summary>

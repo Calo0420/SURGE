@@ -96,16 +96,41 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         if (GetComponent<SurgePathTrailRenderer>() == null)
             gameObject.AddComponent<SurgePathTrailRenderer>();
 
-        if (boardInput != null) boardInput.PathCommitted += OnPathCommitted;
+        if (boardInput != null)
+        {
+            boardInput.PathChanged += OnPathChanged;
+            boardInput.PathCommitted += OnPathCommitted;
+            boardInput.PathRejected += OnPathRejected;
+        }
     }
 
     private void OnDestroy()
     {
-        if (boardInput != null) boardInput.PathCommitted -= OnPathCommitted;
+        if (boardInput != null)
+        {
+            boardInput.PathChanged -= OnPathChanged;
+            boardInput.PathCommitted -= OnPathCommitted;
+            boardInput.PathRejected -= OnPathRejected;
+        }
+    }
+
+    private void OnPathChanged(System.Collections.Generic.IReadOnlyList<int> path)
+    {
+        if (boardView != null)
+            boardView.HighlightPath(path, boardInput != null && boardInput.PathIsLegal);
+    }
+
+    private void OnPathRejected()
+    {
+        if (boardView != null)
+            boardView.HighlightPath(null, false);
     }
 
     private void OnPathCommitted(ClearResult result)
     {
+        if (boardView != null)
+            boardView.HighlightPath(null, false);
+
         // Push the committed clear through the view first: it diffs the board
         // and classifies every changed cell, which is what the effects below
         // are driven from.
@@ -186,11 +211,9 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         bool isSurge = driver.SurgeActive;
         if (isSurge && !_wasSurgeActive)
         {
-            if (vfx != null)
+            if (vfx != null && boardView != null)
             {
-                vfx.PlaySurgeActivation(transform.position);
-                vfx.PlayShockwave(transform.position, SurgeVfxColor.NeonPink, 1.8f);
-                vfx.PlayLightningBurst(transform.position, SurgeVfxColor.NeonPink, 1.2f);
+                vfx.PlaySurgeOverdrive(boardView.transform.position, boardView.Extent * 0.5f);
             }
 
             if (SurgeAudioManager.Instance != null)
