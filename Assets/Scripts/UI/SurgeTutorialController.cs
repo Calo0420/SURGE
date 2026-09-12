@@ -9,6 +9,9 @@
 
 using Surge.Runtime;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
@@ -41,6 +44,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         if (driver == null)
             driver = FindFirstObjectByType<MatchDriver>();
 
+        EnsureEventSystem();
         LoadCardsIfEmpty();
         EnsureUI();
     }
@@ -56,6 +60,47 @@ public sealed class SurgeTutorialController : MonoBehaviour
         {
             if (tutorialPanel != null)
                 tutorialPanel.SetActive(false);
+        }
+    }
+
+    private void Update()
+    {
+        if (!IsOpen) return;
+
+        // Keyboard & gamepad navigation fallback
+        var keyboard = Keyboard.current;
+        if (keyboard != null)
+        {
+            if (keyboard.spaceKey.wasPressedThisFrame ||
+                keyboard.enterKey.wasPressedThisFrame ||
+                keyboard.numpadEnterKey.wasPressedThisFrame ||
+                keyboard.rightArrowKey.wasPressedThisFrame ||
+                keyboard.dKey.wasPressedThisFrame)
+            {
+                OnNextClicked();
+            }
+            else if (keyboard.leftArrowKey.wasPressedThisFrame || keyboard.aKey.wasPressedThisFrame)
+            {
+                OnPrevClicked();
+            }
+            else if (keyboard.escapeKey.wasPressedThisFrame)
+            {
+                CloseTutorial();
+            }
+        }
+    }
+
+    private void EnsureEventSystem()
+    {
+        if (EventSystem.current == null && FindFirstObjectByType<EventSystem>() == null)
+        {
+            GameObject esObj = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
+            var uiModule = esObj.GetComponent<InputSystemUIInputModule>();
+            if (uiModule != null)
+            {
+                uiModule.AssignDefaultActions();
+            }
+            DontDestroyOnLoad(esObj);
         }
     }
 
@@ -76,11 +121,20 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
     private void EnsureUI()
     {
-        if (tutorialPanel != null && cardDisplay != null) return;
+        EnsureEventSystem();
 
         Canvas canvas = GetComponentInParent<Canvas>();
         if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
         if (canvas == null) return;
+
+        // If runtime modal already exists under canvas, bind or refresh
+        Transform existingPanel = canvas.transform.Find("TutorialModal_Runtime");
+        if (existingPanel != null && tutorialPanel == null)
+        {
+            Destroy(existingPanel.gameObject);
+        }
+
+        if (tutorialPanel != null && cardDisplay != null) return;
 
         Font standardFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
                             ?? Resources.GetBuiltinResource<Font>("Arial.ttf");
@@ -126,9 +180,10 @@ public sealed class SurgeTutorialController : MonoBehaviour
         titleText.alignment = TextAnchor.MiddleCenter;
         titleText.color = new Color(0.24f, 0.86f, 1f, 1f);
         titleText.text = "HOW TO PLAY";
+        titleText.raycastTarget = false;
 
-        // Card Display Image
-        GameObject cardObj = new GameObject("CardDisplay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        // Card Display Image (clickable to advance!)
+        GameObject cardObj = new GameObject("CardDisplay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
         cardObj.transform.SetParent(containerObj.transform, false);
         RectTransform cardRect = cardObj.GetComponent<RectTransform>();
         cardRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -139,6 +194,11 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
         cardDisplay = cardObj.GetComponent<Image>();
         cardDisplay.preserveAspect = true;
+        cardDisplay.raycastTarget = true;
+
+        Button cardBtn = cardObj.GetComponent<Button>();
+        cardBtn.transition = Selectable.Transition.None;
+        cardBtn.onClick.AddListener(OnNextClicked);
 
         // Navigation Bar Container
         GameObject navObj = new GameObject("NavBar", typeof(RectTransform));
@@ -151,7 +211,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         navRect.sizeDelta = new Vector2(480, 60);
 
         // Prev Button
-        prevButton = CreateNavButton(navObj, "BtnPrev", "< PREV", new Vector2(-150, 0), standardFont, new Color(0.1f, 0.2f, 0.35f, 0.9f), Color.white);
+        prevButton = CreateNavButton(navObj, "BtnPrev", "< PREV", new Vector2(-150, 0), standardFont, new Color(0.1f, 0.2f, 0.35f, 0.95f), Color.white);
         prevButton.onClick.AddListener(OnPrevClicked);
 
         // Page Indicator
@@ -169,6 +229,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         pageIndicatorText.alignment = TextAnchor.MiddleCenter;
         pageIndicatorText.color = new Color(0.8f, 0.9f, 1f, 0.9f);
         pageIndicatorText.text = "1 / 3";
+        pageIndicatorText.raycastTarget = false;
 
         // Next Button
         nextButton = CreateNavButton(navObj, "BtnNext", "NEXT >", new Vector2(150, 0), standardFont, new Color(0.12f, 0.45f, 0.7f, 0.95f), new Color(0.3f, 1f, 0.9f, 1f));
@@ -194,8 +255,17 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
         Image img = btnObj.GetComponent<Image>();
         img.color = btnColor;
+        img.raycastTarget = true;
 
         Button btn = btnObj.GetComponent<Button>();
+        btn.targetGraphic = img;
+
+        ColorBlock cb = btn.colors;
+        cb.normalColor = btnColor;
+        cb.highlightedColor = new Color(Mathf.Min(btnColor.r * 1.35f, 1f), Mathf.Min(btnColor.g * 1.35f, 1f), Mathf.Min(btnColor.b * 1.35f, 1f), 1f);
+        cb.pressedColor = new Color(btnColor.r * 0.7f, btnColor.g * 0.7f, btnColor.b * 0.7f, 1f);
+        cb.disabledColor = new Color(btnColor.r * 0.4f, btnColor.g * 0.4f, btnColor.b * 0.4f, 0.4f);
+        btn.colors = cb;
 
         GameObject txtObj = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
         txtObj.transform.SetParent(btnObj.transform, false);
@@ -212,6 +282,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         txt.alignment = TextAnchor.MiddleCenter;
         txt.color = textColor;
         txt.text = label;
+        txt.raycastTarget = false; // Do not intercept clicks from button
 
         return btn;
     }
