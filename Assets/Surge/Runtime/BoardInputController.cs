@@ -79,10 +79,8 @@ namespace Surge.Runtime
             Pointer pointer = Pointer.current;
             if (pointer == null) return;
 
-            // Input is refused outright during the purge freeze. The board is
-            // mid-celebration and game time is held, so a clear committed now
-            // would carry a timestamp the engine has already seen.
-            if (driver.IsFrozen)
+            // Input is refused outright while suspended/paused or during the purge freeze.
+            if (driver.IsPaused || driver.IsFrozen)
             {
                 if (_dragging) CancelDrag();
                 return;

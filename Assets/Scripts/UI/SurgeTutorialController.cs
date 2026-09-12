@@ -42,7 +42,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
     private void Awake()
     {
         if (driver == null)
-            driver = FindFirstObjectByType<MatchDriver>();
+            driver = FindAnyObjectByType<MatchDriver>();
 
         EnsureEventSystem();
         LoadCardsIfEmpty();
@@ -66,6 +66,57 @@ public sealed class SurgeTutorialController : MonoBehaviour
     private void Update()
     {
         if (!IsOpen) return;
+
+        // Pointer direct click handling (Mouse & Touchscreen via New Input System)
+        var pointer = Pointer.current;
+        bool pressed = false;
+        Vector2 screenPos = Vector2.zero;
+
+        if (pointer != null && pointer.press.wasPressedThisFrame)
+        {
+            pressed = true;
+            screenPos = pointer.position.ReadValue();
+        }
+        else if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            pressed = true;
+            screenPos = Mouse.current.position.ReadValue();
+        }
+
+        if (pressed)
+        {
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            if (rootCanvas == null) rootCanvas = FindAnyObjectByType<Canvas>();
+            Camera cam = (rootCanvas != null && rootCanvas.renderMode == RenderMode.ScreenSpaceOverlay) ? null : (rootCanvas != null ? rootCanvas.worldCamera : null);
+
+            // 1. Close Button '✕'
+            if (closeButton != null && RectTransformUtility.RectangleContainsScreenPoint(closeButton.GetComponent<RectTransform>(), screenPos, cam))
+            {
+                CloseTutorial();
+                return;
+            }
+
+            // 2. Prev Button '< PREV'
+            if (prevButton != null && prevButton.interactable && RectTransformUtility.RectangleContainsScreenPoint(prevButton.GetComponent<RectTransform>(), screenPos, cam))
+            {
+                OnPrevClicked();
+                return;
+            }
+
+            // 3. Next Button 'NEXT >'
+            if (nextButton != null && RectTransformUtility.RectangleContainsScreenPoint(nextButton.GetComponent<RectTransform>(), screenPos, cam))
+            {
+                OnNextClicked();
+                return;
+            }
+
+            // 4. Click anywhere on the tutorial card to advance!
+            if (cardDisplay != null && RectTransformUtility.RectangleContainsScreenPoint(cardDisplay.GetComponent<RectTransform>(), screenPos, cam))
+            {
+                OnNextClicked();
+                return;
+            }
+        }
 
         // Keyboard & gamepad navigation fallback
         var keyboard = Keyboard.current;
@@ -92,7 +143,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
     private void EnsureEventSystem()
     {
-        if (EventSystem.current == null && FindFirstObjectByType<EventSystem>() == null)
+        if (EventSystem.current == null && FindAnyObjectByType<EventSystem>() == null)
         {
             GameObject esObj = new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             var uiModule = esObj.GetComponent<InputSystemUIInputModule>();
@@ -124,7 +175,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         EnsureEventSystem();
 
         Canvas canvas = GetComponentInParent<Canvas>();
-        if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
+        if (canvas == null) canvas = FindAnyObjectByType<Canvas>();
         if (canvas == null) return;
 
         // If runtime modal already exists under canvas, bind or refresh
@@ -289,6 +340,9 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
     public void OpenTutorial()
     {
+        if (driver == null)
+            driver = FindAnyObjectByType<MatchDriver>();
+
         LoadCardsIfEmpty();
         EnsureUI();
 
@@ -302,7 +356,7 @@ public sealed class SurgeTutorialController : MonoBehaviour
         if (driver != null && driver.MatchRunning)
         {
             _pausedMatch = true;
-            Time.timeScale = 0f;
+            driver.PauseMatch();
         }
 
         if (SurgeAudioManager.Instance != null)
@@ -318,10 +372,10 @@ public sealed class SurgeTutorialController : MonoBehaviour
             tutorialPanel.SetActive(false);
 
         // Resume match clock
-        if (_pausedMatch)
+        if (_pausedMatch && driver != null)
         {
             _pausedMatch = false;
-            Time.timeScale = 1f;
+            driver.ResumeMatch();
         }
 
         if (SurgeAudioManager.Instance != null)

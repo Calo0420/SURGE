@@ -130,6 +130,10 @@ namespace Surge.Runtime
         }
 
         // ------------------------------------------------------ suspension --
+        public void PauseMatch() => SetSuspended(true);
+        public void ResumeMatch() => SetSuspended(false);
+        public bool IsPaused => _clock.IsPaused;
+
         void OnApplicationPause(bool paused) => SetSuspended(paused);
         void OnApplicationFocus(bool focused) => SetSuspended(!focused);
 
