@@ -1,7 +1,11 @@
 // ============================================================================
 // SURGE — SurgePathTrailRenderer
 //
-// Renders the glowing neon path trail as the player's finger swipes across nodes.
+// Renders a high-voltage dynamic electric current arcing across connected
+// capacitor nodes as the player swipes. Dual-layer architecture:
+//   - Outer LineRenderer: Pulsing neon corona glow in the active node color.
+//   - Inner LineRenderer: White-hot jagged plasma core crackling at high frequency.
+// Voltage surges into high-intensity oscillation upon reaching 3+ nodes.
 // Triggers tactile haptics on node connection and clears.
 // ============================================================================
 
@@ -24,27 +28,55 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
     [SerializeField] private float lineWidth = 0.14f;
     [SerializeField] private float zOffset = -0.05f;
 
-    private LineRenderer _line;
+    [Header("Electric Current Tuning")]
+    [SerializeField] private int segmentsPerLink = 8;
+    [SerializeField] private float arcDisplacement = 0.11f;
+    [SerializeField] private float arcFrequency = 32f;
+    [SerializeField] private float coreWidthMultiplier = 0.45f;
+    [SerializeField] private float glowWidthMultiplier = 1.6f;
+
+    private LineRenderer _line;       // Outer glowing neon corona
+    private LineRenderer _coreLine;   // Inner white-hot electric plasma core
     private int _lastPathCount;
+    private Color _currentPathColor = Color.cyan;
+    private readonly List<Vector3> _pathNodePositions = new();
+
+    private Vector3[] _outerPositions = new Vector3[256];
+    private Vector3[] _corePositions = new Vector3[256];
 
     private void Awake()
     {
         _line = GetComponent<LineRenderer>();
         if (_line == null)
         {
-            GameObject trailChild = new GameObject("TrailRenderer_Runtime");
-            trailChild.transform.SetParent(transform, false);
-            _line = trailChild.AddComponent<LineRenderer>();
+            GameObject glowChild = new GameObject("ElectricGlow_Runtime");
+            glowChild.transform.SetParent(transform, false);
+            _line = glowChild.AddComponent<LineRenderer>();
+        }
+
+        Transform coreChild = transform.Find("ElectricCore_Runtime");
+        if (coreChild == null)
+        {
+            GameObject coreGo = new GameObject("ElectricCore_Runtime");
+            coreGo.transform.SetParent(transform, false);
+            _coreLine = coreGo.AddComponent<LineRenderer>();
+        }
+        else
+        {
+            _coreLine = coreChild.GetComponent<LineRenderer>();
         }
 
         Shader unlitShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default")
+                             ?? Shader.Find("UI/NeonAdditiveTint")
                              ?? Shader.Find("Sprites/Default");
         if (unlitShader != null)
         {
-            _line.material = new Material(unlitShader);
+            Material glowMat = new Material(unlitShader);
+            _line.material = glowMat;
+            _coreLine.material = new Material(glowMat);
         }
 
-        ConfigureLineRenderer();
+        ConfigureLineRenderers();
 
         if (boardInput == null) boardInput = FindFirstObjectByType<BoardInputController>();
         if (boardView == null) boardView = FindFirstObjectByType<BoardView>();
@@ -71,27 +103,160 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
         }
     }
 
-    private void ConfigureLineRenderer()
+    private void ConfigureLineRenderers()
     {
+        // Outer Corona
         _line.useWorldSpace = true;
-        _line.startWidth = lineWidth;
-        _line.endWidth = lineWidth;
+        _line.startWidth = lineWidth * glowWidthMultiplier;
+        _line.endWidth = lineWidth * glowWidthMultiplier;
         _line.positionCount = 0;
-        _line.numCornerVertices = 5;
-        _line.numCapVertices = 5;
+        _line.numCornerVertices = 4;
+        _line.numCapVertices = 4;
         _line.alignment = LineAlignment.TransformZ;
         _line.sortingLayerName = "Default";
         _line.sortingOrder = 15;
         _line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _line.receiveShadows = false;
+
+        // Inner Core
+        _coreLine.useWorldSpace = true;
+        _coreLine.startWidth = lineWidth * coreWidthMultiplier;
+        _coreLine.endWidth = lineWidth * coreWidthMultiplier;
+        _coreLine.positionCount = 0;
+        _coreLine.numCornerVertices = 4;
+        _coreLine.numCapVertices = 4;
+        _coreLine.alignment = LineAlignment.TransformZ;
+        _coreLine.sortingLayerName = "Default";
+        _coreLine.sortingOrder = 16;
+        _coreLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _coreLine.receiveShadows = false;
+    }
+
+    private void Update()
+    {
+        if (_pathNodePositions.Count < 2 || driver == null || !driver.MatchRunning || driver.IsPaused)
+        {
+            if (_line != null && _line.positionCount > 0)
+                ClearLines();
+            return;
+        }
+
+        RenderElectricArc();
+    }
+
+    private void RenderElectricArc()
+    {
+        int linkCount = _pathNodePositions.Count - 1;
+        int totalPoints = linkCount * segmentsPerLink + 1;
+
+        if (_outerPositions.Length < totalPoints)
+        {
+            int newCap = Mathf.NextPowerOfTwo(totalPoints);
+            _outerPositions = new Vector3[newCap];
+            _corePositions = new Vector3[newCap];
+        }
+
+        // Surge modulation: Circuit is fully charged upon 3+ nodes
+        bool isCharged = _pathNodePositions.Count >= 3;
+        float voltagePulse = isCharged ? (1f + 0.18f * Mathf.Sin(Time.time * 48f)) : 1f;
+        float voltageAmp = isCharged ? 1.35f : 1.0f;
+
+        // Dynamic widths
+        float outerW = lineWidth * glowWidthMultiplier * voltagePulse;
+        float coreW = lineWidth * coreWidthMultiplier;
+
+        _line.startWidth = outerW;
+        _line.endWidth = outerW;
+        _coreLine.startWidth = coreW;
+        _coreLine.endWidth = coreW;
+
+        // Dynamic colors: Glowing neon outer sheath + blinding white-hot plasma core
+        Color outerCol = _currentPathColor;
+        outerCol.a = isCharged ? 0.95f : 0.8f;
+
+        Color coreCol = Color.Lerp(Color.white, _currentPathColor, 0.25f);
+        coreCol.a = 1.0f;
+
+        _line.startColor = outerCol;
+        _line.endColor = outerCol;
+        _coreLine.startColor = coreCol;
+        _coreLine.endColor = coreCol;
+
+        int pointIdx = 0;
+        float timeNoise = Time.time * arcFrequency;
+
+        for (int i = 0; i < linkCount; i++)
+        {
+            Vector3 pA = _pathNodePositions[i];
+            Vector3 pB = _pathNodePositions[i + 1];
+            Vector3 dir = (pB - pA).normalized;
+            Vector3 normal = new Vector3(-dir.y, dir.x, 0f);
+
+            float linkDist = Vector3.Distance(pA, pB);
+            float baseAmp = Mathf.Min(linkDist * 0.14f, arcDisplacement) * voltageAmp;
+
+            for (int k = 0; k <= segmentsPerLink; k++)
+            {
+                // Skip duplicate connection points between adjacent segments
+                if (i > 0 && k == 0) continue;
+
+                float t = (float)k / segmentsPerLink;
+                Vector3 basePos = Vector3.Lerp(pA, pB, t);
+
+                if (k == 0 || k == segmentsPerLink)
+                {
+                    // Firmly anchor the electric arc onto the capacitor node terminals
+                    _outerPositions[pointIdx] = basePos;
+                    _corePositions[pointIdx] = basePos;
+                    pointIdx++;
+                    continue;
+                }
+
+                // Envelope: Zero at capacitor nodes, maximum at center of link
+                float envelope = Mathf.Sin(t * Mathf.PI);
+
+                // High-voltage traveling electrical sine wave
+                float wave = Mathf.Sin(t * 14f - Time.time * 36f + i * 5.3f) * 0.35f;
+
+                // High-speed Perlin noise for jagged lightning kinks
+                float perlinOuter = (Mathf.PerlinNoise(t * 6f + i * 13.7f, timeNoise) - 0.5f) * 2f;
+
+                // Fast stochastic micro-jitter
+                float jitter = (Random.value - 0.5f) * 0.65f;
+
+                float outerDisp = (perlinOuter + wave + jitter) * baseAmp * envelope;
+
+                // Inner core crackles independently with higher frequency
+                float perlinCore = (Mathf.PerlinNoise(t * 10f + i * 29.3f, timeNoise * 1.4f) - 0.5f) * 2f;
+                float coreJitter = (Random.value - 0.5f) * 0.8f;
+                float coreDisp = (perlinCore + coreJitter) * (baseAmp * 0.85f) * envelope;
+
+                _outerPositions[pointIdx] = basePos + normal * outerDisp;
+                _corePositions[pointIdx] = basePos + normal * coreDisp;
+                pointIdx++;
+            }
+        }
+
+        _line.positionCount = pointIdx;
+        _line.SetPositions(_outerPositions);
+
+        _coreLine.positionCount = pointIdx;
+        _coreLine.SetPositions(_corePositions);
+    }
+
+    private void ClearLines()
+    {
+        if (_line != null) _line.positionCount = 0;
+        if (_coreLine != null) _coreLine.positionCount = 0;
+        _pathNodePositions.Clear();
+        _lastPathCount = 0;
     }
 
     private void OnPathChanged(IReadOnlyList<int> path)
     {
         if (path == null || path.Count == 0 || boardView == null || driver == null || !driver.MatchRunning)
         {
-            _line.positionCount = 0;
-            _lastPathCount = 0;
+            ClearLines();
             return;
         }
 
@@ -108,24 +273,20 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
 
         // Determine path color based on cell value
         byte cellVal = driver.Engine.Board.Cells[path[0]];
-        Color pathColor = GetColorForCell(cellVal);
+        _currentPathColor = GetColorForCell(cellVal);
 
-        _line.startColor = pathColor;
-        _line.endColor = pathColor;
-
-        _line.positionCount = path.Count;
+        _pathNodePositions.Clear();
         for (int i = 0; i < path.Count; i++)
         {
             Vector3 pos = boardView.WorldPositionOf(path[i]);
             pos.z += zOffset;
-            _line.SetPosition(i, pos);
+            _pathNodePositions.Add(pos);
         }
     }
 
     private void OnPathCommitted(ClearResult result)
     {
-        _line.positionCount = 0;
-        _lastPathCount = 0;
+        ClearLines();
 
         if (HapticManager.Instance != null)
         {
@@ -149,8 +310,7 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
 
     private void OnPathRejected()
     {
-        _line.positionCount = 0;
-        _lastPathCount = 0;
+        ClearLines();
 
         if (SurgeAudioManager.Instance != null)
             SurgeAudioManager.Instance.PlayReject();
