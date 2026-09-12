@@ -120,13 +120,21 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             vfx.SpawnClearBurst(boardView.WorldPositionOf(d.Index), ToVfxColor(d.From));
         }
 
-        // Heavy Clear: 5+ nodes detonates lightning arcs and expanding shockwave
-        if (result.Path != null && result.Path.Length >= 5)
+        // Match detonation: Every 3+ clear ripples out a sleek neon shockwave from the path center
+        if (result.Path != null && result.Path.Length >= 3)
         {
             Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
             SurgeVfxColor clearCol = ToVfxColor(delta.Changed.Count > 0 ? delta.Changed[0].From : (byte)1);
-            vfx.PlayLightningBurst(center, clearCol, 0.75f);
-            vfx.PlayShockwave(center, clearCol, 0.9f);
+
+            // Dynamic scale: 0.55f for 3-node clears, expanding up to 1.15f for long chains
+            float shockScale = Mathf.Clamp(0.55f + (result.Path.Length - 3) * 0.12f, 0.55f, 1.15f);
+            vfx.PlayShockwave(center, clearCol, shockScale);
+
+            // Heavy Clear: 5+ nodes also detonates high-voltage lightning arcs across the center
+            if (result.Path.Length >= 5)
+            {
+                vfx.PlayLightningBurst(center, clearCol, 0.85f);
+            }
         }
 
         // A spark streak along the path gives the clear a direction.

@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -0.1}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.28, y: 0.28, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -82,7 +82,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 83b94933c36e14fdf98a22de6da06b2a, type: 3}
+  m_Sprite: {fileID: 7454398919864351860, guid: 83b94933c36e14fdf98a22de6da06b2a, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -106,11 +106,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VFXFrameAnimator
   animationFrames:
-  - {fileID: 21300000, guid: 83b94933c36e14fdf98a22de6da06b2a, type: 3}
-  - {fileID: 21300000, guid: c4e79bb640e0e4fe5a9bb83eb96ce471, type: 3}
-  - {fileID: 21300000, guid: 3b2c3d3042b8247a2a46c8e48a647fe9, type: 3}
-  - {fileID: 21300000, guid: afedc14ad82e54f95b704e9c7ea1d6c6, type: 3}
-  - {fileID: 21300000, guid: b288a88e6782e4b01b3a2aef9e3278c7, type: 3}
-  - {fileID: 21300000, guid: 494e568d9245a4633b78bbfee1ec9899, type: 3}
+  - {fileID: 7454398919864351860, guid: 83b94933c36e14fdf98a22de6da06b2a, type: 3}
+  - {fileID: 3595930829373750847, guid: c4e79bb640e0e4fe5a9bb83eb96ce471, type: 3}
+  - {fileID: 7258196993865127347, guid: 3b2c3d3042b8247a2a46c8e48a647fe9, type: 3}
+  - {fileID: -4257970078078198031, guid: afedc14ad82e54f95b704e9c7ea1d6c6, type: 3}
+  - {fileID: -2198955386716955664, guid: b288a88e6782e4b01b3a2aef9e3278c7, type: 3}
+  - {fileID: -7912677071679997593, guid: 494e568d9245a4633b78bbfee1ec9899, type: 3}
   framesPerSecond: 30
   spriteRenderer: {fileID: 0}

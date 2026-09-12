@@ -15,6 +15,8 @@ public sealed class VFXManager : MonoBehaviour
     [SerializeField] private GameObject shockwavePrefab;
     [SerializeField] private GameObject lightningPrefab;
     [SerializeField] private GameObject implosionPrefab;
+    [SerializeField] private GameObject impactPrefab;
+    [SerializeField] private GameObject explosionPrefab;
 
     [Header("Palette")]
     [SerializeField] private SurgePalette palette;
@@ -90,6 +92,34 @@ public sealed class VFXManager : MonoBehaviour
             lightningPrefab = Resources.Load<GameObject>("VFX/vfx_Lightning_01");
         if (implosionPrefab == null)
             implosionPrefab = Resources.Load<GameObject>("VFX/vfx_Implosion_01");
+        if (impactPrefab == null)
+            impactPrefab = Resources.Load<GameObject>("VFX/vfx_Impact_01");
+        if (explosionPrefab == null)
+            explosionPrefab = Resources.Load<GameObject>("VFX/vfx_Explosion_02");
+    }
+
+    /// <summary>High-voltage electrical impact burst on individual node clears</summary>
+    public void PlayImpactBurst(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 0.45f)
+    {
+        if (impactPrefab == null) return;
+        GameObject go = Instantiate(impactPrefab, worldPosition, Quaternion.identity, transform);
+        go.transform.localScale = Vector3.one * scale;
+        Color col = GetPaletteColor(colorId) * burstHdrIntensity;
+        col.a = 1f;
+        ApplyVfxColor(go, col);
+        Destroy(go, 0.8f);
+    }
+
+    /// <summary>High-energy plasma explosion on 3+ match completions</summary>
+    public void PlayExplosion(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 0.6f)
+    {
+        if (explosionPrefab == null) return;
+        GameObject go = Instantiate(explosionPrefab, worldPosition, Quaternion.identity, transform);
+        go.transform.localScale = Vector3.one * scale;
+        Color col = GetPaletteColor(colorId) * burstHdrIntensity;
+        col.a = 1f;
+        ApplyVfxColor(go, col);
+        Destroy(go, 1.6f);
     }
 
     /// <summary>High-voltage lightning burst on node clears (especially 5+ chains)</summary>
@@ -137,21 +167,18 @@ public sealed class VFXManager : MonoBehaviour
 
     public void SpawnClearBurst(Vector3 worldPosition, SurgeVfxColor colorId)
     {
-        if (burstPool == null)
+        if (burstPool != null)
         {
-            Debug.LogError($"{nameof(VFXManager)} pool was not initialized.", this);
-            return;
+            VFXFrameAnimator burst = burstPool.Get();
+            if (burst != null)
+            {
+                burst.transform.position = worldPosition;
+                burst.Play(GetPaletteColor(colorId), burstHdrIntensity);
+            }
         }
 
-        VFXFrameAnimator burst = burstPool.Get();
-        if (burst == null)
-        {
-            Debug.LogError($"{nameof(VFXManager)} failed to get a burst instance from the pool.", this);
-            return;
-        }
-
-        burst.transform.position = worldPosition;
-        burst.Play(GetPaletteColor(colorId), burstHdrIntensity);
+        // High-voltage electric impact burst at the capacitor terminal
+        PlayImpactBurst(worldPosition, colorId, 0.45f);
     }
 
     public void EmitSparkStreak(Vector3 worldPosition, Vector2 direction, SurgeVfxColor colorId, int count = 12)
