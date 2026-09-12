@@ -28,10 +28,19 @@ public sealed class SurgeHUDController : MonoBehaviour
     [SerializeField] private Color warningTimerColor = new Color(1.0f, 0.25f, 0.25f, 1.0f);
     [SerializeField] private Color surgeReadyColor = new Color(1.0f, 0.85f, 0.2f, 1.0f);
 
+    [Header("Tutorial")]
+    [SerializeField] private SurgeTutorialController tutorialController;
+
     private float _displayedScore;
     private Color _initialTimerColor;
     private Color _initialMeterColor;
     private bool _hasInitialColors;
+
+    public void OpenTutorial()
+    {
+        if (tutorialController != null)
+            tutorialController.OpenTutorial();
+    }
 
     private void Awake()
     {
@@ -83,6 +92,9 @@ public sealed class SurgeHUDController : MonoBehaviour
             Transform t = transform.Find("SurgeMeterText");
             if (t != null) surgeMeterText = t.GetComponent<Text>();
         }
+
+        if (tutorialController == null)
+            tutorialController = FindFirstObjectByType<SurgeTutorialController>();
     }
 
     private void CacheInitialColors()

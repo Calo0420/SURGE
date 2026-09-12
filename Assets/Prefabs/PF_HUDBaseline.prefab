@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 871816994126111842}
   - component: {fileID: 3342243809247187680}
   - component: {fileID: 445566778899001122}
+  - component: {fileID: 556677889900112233}
   m_Layer: 0
   m_Name: PF_HUDBaseline
   m_TagString: Untagged
@@ -410,3 +411,26 @@ MonoBehaviour:
   m_EffectColor: {r: 0.3, g: 0.2, b: 0.04, a: 0.85}
   m_EffectDistance: {x: 2.5, y: -2.5}
   m_UseGraphicAlpha: 1
+--- !u!114 &556677889900112233
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2014647171486792436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f80, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: SurgeTutorialController
+  tutorialPanel: {fileID: 0}
+  cardDisplay: {fileID: 0}
+  prevButton: {fileID: 0}
+  nextButton: {fileID: 0}
+  closeButton: {fileID: 0}
+  pageIndicatorText: {fileID: 0}
+  cards:
+  - {fileID: 21300000, guid: a01e285fa0cbb4ff3b2975dc11641735, type: 3}
+  - {fileID: 21300000, guid: 12c386d43a6554830a2279d9b2560232, type: 3}
+  - {fileID: 21300000, guid: 68028a2be169e42798bcdb176be86a03, type: 3}
+  driver: {fileID: 0}
