@@ -104,15 +104,19 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
 
         ConfigureLineRenderers();
 
-        if (boardInput == null) boardInput = FindFirstObjectByType<BoardInputController>();
-        if (boardView == null) boardView = FindFirstObjectByType<BoardView>();
-        if (driver == null) driver = FindFirstObjectByType<MatchDriver>();
+        if (boardInput == null) boardInput = FindAnyObjectByType<BoardInputController>();
+        if (boardView == null) boardView = FindAnyObjectByType<BoardView>();
+        if (driver == null) driver = FindAnyObjectByType<MatchDriver>();
     }
 
     private void Start()
     {
         if (boardInput != null)
         {
+            boardInput.PathChanged -= OnPathChanged;
+            boardInput.PathCommitted -= OnPathCommitted;
+            boardInput.PathRejected -= OnPathRejected;
+
             boardInput.PathChanged += OnPathChanged;
             boardInput.PathCommitted += OnPathCommitted;
             boardInput.PathRejected += OnPathRejected;
