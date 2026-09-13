@@ -107,6 +107,12 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             audioGo.AddComponent<SurgeAudioManager>();
         }
 
+        if (FindAnyObjectByType<SurgeTutorialController>() == null)
+        {
+            GameObject tutGo = new GameObject("SurgeTutorialController");
+            tutGo.AddComponent<SurgeTutorialController>();
+        }
+
         var trail = GetComponent<SurgePathTrailRenderer>();
         if (trail == null)
             trail = gameObject.AddComponent<SurgePathTrailRenderer>();

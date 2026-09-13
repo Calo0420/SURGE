@@ -167,13 +167,11 @@ public sealed class SurgeTutorialController : MonoBehaviour
     {
         if (cards == null || cards.Length == 0)
         {
-            Sprite c1 = Resources.Load<Sprite>("Tutorial/Tutorial_Card_01_Connect");
-            Sprite c2 = Resources.Load<Sprite>("Tutorial/Tutorial_Card_02_Surge");
-            Sprite c3 = Resources.Load<Sprite>("Tutorial/Tutorial_Card_03_Purge");
-
-            if (c1 != null && c2 != null && c3 != null)
+            var loaded = Resources.LoadAll<Sprite>("Tutorial");
+            if (loaded != null && loaded.Length > 0)
             {
-                cards = new Sprite[] { c1, c2, c3 };
+                System.Array.Sort(loaded, (a, b) => string.Compare(a.name, b.name, System.StringComparison.Ordinal));
+                cards = loaded;
             }
         }
     }
