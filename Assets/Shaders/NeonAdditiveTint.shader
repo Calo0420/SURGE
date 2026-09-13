@@ -22,7 +22,7 @@ Shader "UI/NeonAdditiveTint"
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend One OneMinusSrcAlpha
+        Blend SrcAlpha One
 
         Pass
         {
@@ -72,7 +72,7 @@ Shader "UI/NeonAdditiveTint"
                 half3 finalRgb = tex.rgb * _GlowColor.rgb * input.color.rgb * (_GlowColor.a * _GlowPower);
                 half finalAlpha = tex.a * input.color.a;
 
-                return half4(finalRgb * finalAlpha, finalAlpha);
+                return half4(finalRgb * tex.a, finalAlpha);
             }
             ENDHLSL
         }
@@ -125,7 +125,7 @@ Shader "UI/NeonAdditiveTint"
                 half3 finalRgb = tex.rgb * _GlowColor.rgb * input.color.rgb * (_GlowColor.a * _GlowPower);
                 half finalAlpha = tex.a * input.color.a;
 
-                return half4(finalRgb * finalAlpha, finalAlpha);
+                return half4(finalRgb * tex.a, finalAlpha);
             }
             ENDHLSL
         }
@@ -178,7 +178,7 @@ Shader "UI/NeonAdditiveTint"
                 half3 finalRgb = tex.rgb * _GlowColor.rgb * input.color.rgb * (_GlowColor.a * _GlowPower);
                 half finalAlpha = tex.a * input.color.a;
 
-                return half4(finalRgb * finalAlpha, finalAlpha);
+                return half4(finalRgb * tex.a, finalAlpha);
             }
             ENDHLSL
         }
@@ -198,7 +198,7 @@ Shader "UI/NeonAdditiveTint"
         Cull Off
         Lighting Off
         ZWrite Off
-        Blend One OneMinusSrcAlpha
+        Blend SrcAlpha One
 
         Pass
         {
@@ -240,7 +240,7 @@ Shader "UI/NeonAdditiveTint"
                 fixed3 finalRgb = tex.rgb * _GlowColor.rgb * input.color.rgb * (_GlowColor.a * _GlowPower);
                 float finalAlpha = tex.a * input.color.a;
 
-                return fixed4(finalRgb * finalAlpha, finalAlpha);
+                return fixed4(finalRgb * tex.a, finalAlpha);
             }
             ENDCG
         }
