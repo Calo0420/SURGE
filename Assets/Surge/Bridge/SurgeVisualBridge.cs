@@ -20,6 +20,7 @@
 using Surge.Runtime;
 using SurgeCore;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 [DisallowMultipleComponent]
 public sealed class SurgeVisualBridge : MonoBehaviour
@@ -53,6 +54,19 @@ public sealed class SurgeVisualBridge : MonoBehaviour
 
     private static SurgeVfxColor ToVfxColor(byte cellValue) =>
         (SurgeVfxColor)Mathf.Clamp(cellValue - 1, 0, 4);
+
+    private void Awake()
+    {
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            var camData = cam.GetUniversalAdditionalCameraData();
+            if (camData != null)
+            {
+                camData.renderPostProcessing = true;
+            }
+        }
+    }
 
     private void Start()
     {
