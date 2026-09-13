@@ -65,6 +65,15 @@ public sealed class SurgeTutorialController : MonoBehaviour
 
     private void Update()
     {
+        // Press 'H' at any time to toggle the How to Play tutorial cards
+        var keyboard = Keyboard.current;
+        if (keyboard != null && keyboard.hKey.wasPressedThisFrame)
+        {
+            if (IsOpen) CloseTutorial();
+            else OpenTutorial();
+            return;
+        }
+
         if (!IsOpen) return;
 
         // Pointer direct click handling (Mouse & Touchscreen via New Input System)
@@ -433,4 +442,28 @@ public sealed class SurgeTutorialController : MonoBehaviour
             nextButtonText.text = (_currentIndex == cards.Length - 1) ? "PLAY!" : "NEXT >";
         }
     }
+
+#if UNITY_EDITOR
+    [UnityEditor.MenuItem("Surge/Tutorial/Reset Tutorial Seen (Show Cards Next Play)", priority = 100)]
+    public static void ResetTutorialSeen()
+    {
+        PlayerPrefs.DeleteKey(PrefKeyTutorialSeen);
+        PlayerPrefs.Save();
+        Debug.Log("[Surge] Tutorial seen flag reset. Tutorial cards will display on next match start.");
+    }
+
+    [UnityEditor.MenuItem("Surge/Tutorial/Open Tutorial Cards Now", priority = 101)]
+    public static void OpenTutorialNow()
+    {
+        var controller = Object.FindAnyObjectByType<SurgeTutorialController>();
+        if (controller != null)
+        {
+            controller.OpenTutorial();
+        }
+        else
+        {
+            Debug.LogWarning("[Surge] No SurgeTutorialController found in active scene.");
+        }
+    }
+#endif
 }

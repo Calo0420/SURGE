@@ -73,7 +73,7 @@ public sealed class SurgeHUDController : MonoBehaviour
     private void ResolveReferences()
     {
         if (driver == null)
-            driver = FindFirstObjectByType<MatchDriver>();
+            driver = FindAnyObjectByType<MatchDriver>();
 
         if (scoreText == null)
         {
@@ -82,10 +82,7 @@ public sealed class SurgeHUDController : MonoBehaviour
         }
 
         if (timerText == null)
-        {
-            Transform t = transform.Find("TimerText");
-            if (t != null) timerText = t.GetComponent<Text>();
-        }
+            timerText = GetComponentInChildren<Text>();
 
         if (surgeMeterText == null)
         {
@@ -94,7 +91,7 @@ public sealed class SurgeHUDController : MonoBehaviour
         }
 
         if (tutorialController == null)
-            tutorialController = FindFirstObjectByType<SurgeTutorialController>();
+            tutorialController = FindAnyObjectByType<SurgeTutorialController>();
     }
 
     private void CacheInitialColors()

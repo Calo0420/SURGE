@@ -35,7 +35,7 @@ public class SurgeSkillzMatchController : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         if (driver == null)
-            driver = FindFirstObjectByType<MatchDriver>();
+            driver = FindAnyObjectByType<MatchDriver>();
     }
 
     private void Start()
