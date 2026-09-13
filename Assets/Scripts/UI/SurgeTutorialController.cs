@@ -128,7 +128,6 @@ public sealed class SurgeTutorialController : MonoBehaviour
         }
 
         // Keyboard & gamepad navigation fallback
-        var keyboard = Keyboard.current;
         if (keyboard != null)
         {
             if (keyboard.spaceKey.wasPressedThisFrame ||
