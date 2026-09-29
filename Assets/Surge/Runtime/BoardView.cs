@@ -18,6 +18,7 @@
 // ============================================================================
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using SurgeCore;
 using UnityEngine;
@@ -47,15 +48,24 @@ namespace Surge.Runtime
         SpriteRenderer[] _nodes;
         SpriteRenderer[] _sockets;
         SpriteRenderer[] _halos;
+        Transform[] _nodeRoots;
+        Transform[] _visuals;
         byte[] _shown;
         MatchDriver _driver;
         Sprite _generatedCore;
         Sprite _generatedSocket;
         Sprite _generatedHalo;
         Material _nodeMaterial;
+        Coroutine _transitionRoutine;
+        bool[] _transitioning;
 
         const float IdleIntensity = 0.58f;
         const float InactivePathIntensity = 0.22f;
+        const float ClearStagger = 0.022f;
+        const float ClearDuration = 0.11f;
+        const float FallDuration = 0.20f;
+        const float RefillDuration = 0.24f;
+        const float ColumnStagger = 0.014f;
 
         /// Raised after every applied change, with the classified diff. The
         /// same BoardDelta instance is reused each time — read it inside the
@@ -92,6 +102,7 @@ namespace Surge.Runtime
             {
                 SpriteRenderer sr = _nodes[i];
                 if (sr == null || !sr.enabled) continue;
+                if (_transitioning != null && _transitioning[i]) continue;
 
                 int pathIndex = hasPath ? _activePath.IndexOf(i) : -1;
                 bool inPath = pathIndex >= 0;
@@ -154,8 +165,11 @@ namespace Surge.Runtime
 
                 targetCol.a = 1f;
 
-                Transform t = sr.transform;
+                Transform t = _visuals != null && i < _visuals.Length
+                    ? _visuals[i]
+                    : sr.transform;
                 t.localScale = Vector3.Lerp(t.localScale, Vector3.one * targetScale, dt * lerpSpeed);
+                t.localPosition = Vector3.Lerp(t.localPosition, Vector3.zero, dt * lerpSpeed);
                 sr.color = Color.Lerp(sr.color, targetCol, dt * lerpSpeed);
             }
         }
@@ -179,14 +193,17 @@ namespace Surge.Runtime
 
         void Build(int size)
         {
-            if (_nodes != null)
-                foreach (SpriteRenderer r in _nodes)
-                    if (r != null) Destroy(r.gameObject);
+            if (_nodeRoots != null)
+                foreach (Transform root in _nodeRoots)
+                    if (root != null) Destroy(root.gameObject);
 
             Size = size;
             _nodes = new SpriteRenderer[size * size];
             _sockets = new SpriteRenderer[size * size];
             _halos = new SpriteRenderer[size * size];
+            _nodeRoots = new Transform[size * size];
+            _visuals = new Transform[size * size];
+            _transitioning = new bool[size * size];
             _shown = new byte[size * size];
 
             if (_nodeMaterial == null)
@@ -201,13 +218,14 @@ namespace Surge.Runtime
                 var go = new GameObject($"Node_{BoardGeometry.Row(i, size)}_{BoardGeometry.Col(i, size)}");
                 go.transform.SetParent(transform, false);
                 go.transform.localPosition = LocalPositionOf(i);
-                go.transform.localScale = Vector3.one * nodeScale;
+                go.transform.localScale = Vector3.one;
+                _nodeRoots[i] = go.transform;
 
                 // 1. Dark titanium cyber socket housing (stays on floor)
                 var socketObj = new GameObject("Socket");
                 socketObj.transform.SetParent(go.transform, false);
                 socketObj.transform.localPosition = Vector3.zero;
-                socketObj.transform.localScale = Vector3.one * 1.05f;
+                socketObj.transform.localScale = Vector3.one * nodeScale * 1.05f;
 
                 var socketSr = socketObj.AddComponent<SpriteRenderer>();
                 socketSr.sprite = socketSprite;
@@ -218,8 +236,14 @@ namespace Surge.Runtime
 
                 // 2. Selection-only corona. Keeping this separate lets idle
                 // nodes stay crisp and below the global bloom threshold.
+                var visualObj = new GameObject("NodeVisual");
+                visualObj.transform.SetParent(go.transform, false);
+                visualObj.transform.localPosition = Vector3.zero;
+                visualObj.transform.localScale = Vector3.one * nodeScale;
+                _visuals[i] = visualObj.transform;
+
                 var haloObj = new GameObject("SelectionHalo");
-                haloObj.transform.SetParent(go.transform, false);
+                haloObj.transform.SetParent(visualObj.transform, false);
                 haloObj.transform.localPosition = Vector3.zero;
                 haloObj.transform.localScale = Vector3.one * 1.38f;
 
@@ -232,7 +256,12 @@ namespace Surge.Runtime
                 _halos[i] = haloSr;
 
                 // 3. Glowing cyber capacitor lens (tinted with cell color)
-                var sr = go.AddComponent<SpriteRenderer>();
+                var coreObj = new GameObject("Core");
+                coreObj.transform.SetParent(visualObj.transform, false);
+                coreObj.transform.localPosition = Vector3.zero;
+                coreObj.transform.localScale = Vector3.one;
+
+                var sr = coreObj.AddComponent<SpriteRenderer>();
                 sr.sprite = coreSprite;
                 sr.sortingLayerName = sortingLayerName;
                 sr.sortingOrder = sortingOrder + 1;
@@ -280,16 +309,213 @@ namespace Surge.Runtime
             if (_driver == null || !_driver.MatchRunning || _nodes == null) return null;
 
             _activePath.Clear();
+            byte[] before = (byte[])_shown.Clone();
             byte[] cells = _driver.Engine.Board.Cells;
             BoardGeometry.Diff(_shown, cells,
                                result?.Path, result?.NewNodes, _delta);
 
-            foreach (CellDelta d in _delta.Changed) Paint(d.Index, d.To);
             Array.Copy(cells, _shown, cells.Length);
+            StartTransition(before, cells, result);
 
             BoardChanged?.Invoke(_delta);
             return _delta;
         }
+
+        void StartTransition(byte[] before, byte[] after, ClearResult result)
+        {
+            if (_transitionRoutine != null)
+            {
+                StopCoroutine(_transitionRoutine);
+                _transitionRoutine = null;
+                SnapVisualsToShown();
+            }
+
+            _transitionRoutine = StartCoroutine(AnimateTransition(before, after, result));
+        }
+
+        IEnumerator AnimateTransition(byte[] before, byte[] after, ClearResult result)
+        {
+            int[] path = result?.Path;
+            var cleared = new HashSet<int>();
+            if (path != null)
+                for (int i = 0; i < path.Length; i++)
+                    if (path[i] >= 0 && path[i] < _nodes.Length)
+                        cleared.Add(path[i]);
+
+            int[] sourceForDestination = BoardGeometry.BuildGravitySourceMap(before, path);
+            float clearWindow = path == null || path.Length == 0
+                ? 0f
+                : (path.Length - 1) * ClearStagger + ClearDuration;
+
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                bool moves = sourceForDestination[i] != i;
+                bool clears = cleared.Contains(i);
+                _transitioning[i] = moves || clears;
+
+                if (clears)
+                {
+                    _nodes[i].enabled = true;
+                    SetNodeColor(i, before[i], 1.15f);
+                }
+                else if (moves)
+                {
+                    _nodes[i].enabled = false;
+                    _halos[i].enabled = false;
+                }
+                else
+                {
+                    Paint(i, after[i]);
+                    ResetVisual(i);
+                }
+            }
+
+            float elapsed = 0f;
+            while (elapsed < clearWindow)
+            {
+                elapsed += Time.unscaledDeltaTime;
+
+                if (path != null)
+                {
+                    for (int p = 0; p < path.Length; p++)
+                    {
+                        int index = path[p];
+                        if (index < 0 || index >= _nodes.Length) continue;
+
+                        float localTime = elapsed - p * ClearStagger;
+                        if (localTime < 0f) continue;
+
+                        float t = Mathf.Clamp01(localTime / ClearDuration);
+                        float punch = t < 0.42f
+                            ? Mathf.Lerp(1f, 0.72f, EaseIn(t / 0.42f))
+                            : Mathf.Lerp(0.72f, 1.18f, EaseOut((t - 0.42f) / 0.58f));
+                        _visuals[index].localScale = Vector3.one * nodeScale * punch;
+
+                        Color flash = Color.Lerp(
+                            ColorForValue(before[index]) * 1.15f,
+                            Color.white * 1.6f,
+                            EaseOut(t));
+                        flash.a = 1f - Mathf.Clamp01((t - 0.62f) / 0.38f);
+                        _nodes[index].color = flash;
+                    }
+                }
+
+                yield return null;
+            }
+
+            if (path != null)
+                for (int i = 0; i < path.Length; i++)
+                {
+                    int index = path[i];
+                    if (index >= 0 && index < _nodes.Length)
+                        _nodes[index].enabled = false;
+                }
+
+            float maxTravel = 0f;
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                int source = sourceForDestination[i];
+                if (source == i)
+                {
+                    _transitioning[i] = false;
+                    continue;
+                }
+
+                bool refill = source < 0;
+                int row = BoardGeometry.Row(i, Size);
+                int refillDepth = Mathf.Max(1, Size - row);
+                Vector3 startOffset = refill
+                    ? Vector3.up * cellSize * refillDepth
+                    : LocalPositionOf(source) - LocalPositionOf(i);
+
+                _visuals[i].localPosition = startOffset;
+                _visuals[i].localScale = Vector3.one * nodeScale * (refill ? 0.82f : 0.94f);
+                SetNodeColor(i, after[i], refill ? 0.82f : IdleIntensity);
+                _nodes[i].enabled = after[i] != 0;
+                _halos[i].enabled = false;
+
+                maxTravel = Mathf.Max(maxTravel, Mathf.Abs(startOffset.y));
+            }
+
+            float travelElapsed = 0f;
+            float travelDuration = (maxTravel > cellSize * 1.1f ? RefillDuration : FallDuration) +
+                                   (Size - 1) * ColumnStagger;
+            while (travelElapsed < travelDuration)
+            {
+                travelElapsed += Time.unscaledDeltaTime;
+
+                for (int i = 0; i < _nodes.Length; i++)
+                {
+                    int source = sourceForDestination[i];
+                    if (source == i) continue;
+
+                    bool refill = source < 0;
+                    float delay = BoardGeometry.Col(i, Size) * ColumnStagger;
+                    float nodeDuration = refill ? RefillDuration : FallDuration;
+                    float t = Mathf.Clamp01((travelElapsed - delay) / nodeDuration);
+                    if (t <= 0f) continue;
+                    float eased = EaseOutCubic(t);
+
+                    Vector3 startOffset = source < 0
+                        ? Vector3.up * cellSize * Mathf.Max(1, Size - BoardGeometry.Row(i, Size))
+                        : LocalPositionOf(source) - LocalPositionOf(i);
+
+                    _visuals[i].localPosition = Vector3.LerpUnclamped(startOffset, Vector3.zero, eased);
+
+                    float landing = t > 0.78f
+                        ? Mathf.Sin((t - 0.78f) / 0.22f * Mathf.PI) * 0.10f
+                        : 0f;
+                    _visuals[i].localScale = Vector3.one * nodeScale * (1f + landing);
+
+                    Color target = ColorForValue(after[i]) * IdleIntensity;
+                    target.a = 1f;
+                    _nodes[i].color = Color.Lerp(_nodes[i].color, target, eased);
+                }
+
+                yield return null;
+            }
+
+            SnapVisualsToShown();
+            _transitionRoutine = null;
+        }
+
+        void SnapVisualsToShown()
+        {
+            if (_nodes == null || _shown == null) return;
+
+            for (int i = 0; i < _nodes.Length; i++)
+            {
+                _transitioning[i] = false;
+                ResetVisual(i);
+                Paint(i, _shown[i]);
+            }
+        }
+
+        void ResetVisual(int index)
+        {
+            if (_visuals == null || index < 0 || index >= _visuals.Length ||
+                _visuals[index] == null) return;
+
+            _visuals[index].localPosition = Vector3.zero;
+            _visuals[index].localScale = Vector3.one * nodeScale;
+            if (_halos[index] != null) _halos[index].enabled = false;
+        }
+
+        void SetNodeColor(int index, byte value, float intensity)
+        {
+            if (index < 0 || index >= _nodes.Length || _nodes[index] == null) return;
+            Color color = ColorForValue(value) * intensity;
+            color.a = 1f;
+            _nodes[index].color = color;
+        }
+
+        Color ColorForValue(byte value) =>
+            value < colors.Length ? colors[value] : Color.magenta;
+
+        static float EaseIn(float t) => t * t;
+        static float EaseOut(float t) => 1f - (1f - t) * (1f - t);
+        static float EaseOutCubic(float t) =>
+            1f - Mathf.Pow(1f - Mathf.Clamp01(t), 3f);
 
         void Paint(int index, byte value)
         {
@@ -303,7 +529,7 @@ namespace Surge.Runtime
             }
 
             sr.enabled = true;
-            Color baseColor = value < colors.Length ? colors[value] : Color.magenta;
+            Color baseColor = ColorForValue(value);
             baseColor *= IdleIntensity;
             baseColor.a = 1f;
             sr.color = baseColor;
@@ -499,6 +725,8 @@ namespace Surge.Runtime
 
         void OnDestroy()
         {
+            if (_transitionRoutine != null) StopCoroutine(_transitionRoutine);
+
             if (_generatedCore != null)
             {
                 if (_generatedCore.texture != null) Destroy(_generatedCore.texture);

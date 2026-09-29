@@ -104,6 +104,36 @@ namespace Surge.Runtime
         /// Full board extent in board space, useful for framing the camera.
         public static float Extent(int size, float cellSize) => size * cellSize;
 
+        /// Maps each settled destination cell to the pre-clear source cell
+        /// that gravity moved into it. A value of -1 means the destination is
+        /// a refill created above the board. This is presentation metadata
+        /// only; it replays the same column compaction used by Diff.
+        public static int[] BuildGravitySourceMap(byte[] before, int[] path)
+        {
+            if (before == null) return new int[0];
+
+            int size = SizeOf(before.Length);
+            var sources = new int[before.Length];
+            for (int i = 0; i < sources.Length; i++) sources[i] = -1;
+            if (size <= 0) return sources;
+
+            for (int col = 0; col < size; col++)
+            {
+                int writeRow = size - 1;
+                for (int row = size - 1; row >= 0; row--)
+                {
+                    int source = Index(row, col, size);
+                    if (Contains(path, source) || before[source] == 0) continue;
+
+                    int destination = Index(writeRow, col, size);
+                    sources[destination] = source;
+                    writeRow--;
+                }
+            }
+
+            return sources;
+        }
+
         // ----------------------------------------------------------- diff --
         /// Diffs two board snapshots and classifies every change.
         ///
