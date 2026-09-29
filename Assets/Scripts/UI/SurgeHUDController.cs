@@ -9,6 +9,7 @@
 
 using Surge.Runtime;
 using SurgeCore;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,9 +20,15 @@ public sealed class SurgeHUDController : MonoBehaviour
     [SerializeField] private MatchDriver driver;
 
     [Header("UI Elements")]
-    [SerializeField] private Text scoreText;
-    [SerializeField] private Text timerText;
-    [SerializeField] private Text surgeMeterText;
+    [SerializeField] private TMP_Text scoreText;
+    [SerializeField] private TMP_Text timerText;
+    [SerializeField] private TMP_Text surgeMeterText;
+    [SerializeField] private Image surgeMeterFill;
+    [SerializeField] private Image surgeMeterGlow;
+    [SerializeField] private RectTransform safeAreaRoot;
+    [SerializeField] private RectTransform scoreValueRoot;
+    [SerializeField] private RectTransform timerValueRoot;
+    [SerializeField] private RectTransform surgeValueRoot;
 
     [Header("Styling")]
     [SerializeField] private SurgePalette palette;
@@ -35,6 +42,10 @@ public sealed class SurgeHUDController : MonoBehaviour
     private Color _initialTimerColor;
     private Color _initialMeterColor;
     private bool _hasInitialColors;
+    private int _lastTargetScore = -1;
+    private float _scorePunch;
+    private Rect _lastSafeArea;
+    private Vector2Int _lastScreenSize;
 
     public void OpenTutorial()
     {
@@ -46,6 +57,7 @@ public sealed class SurgeHUDController : MonoBehaviour
     {
         ResolveReferences();
         CacheInitialColors();
+        ApplySafeArea(force: true);
     }
 
     private void Start()
@@ -67,7 +79,9 @@ public sealed class SurgeHUDController : MonoBehaviour
 
     private void Update()
     {
+        ApplySafeArea(force: false);
         UpdateHUD(forceImmediate: false);
+        AnimatePresentation();
     }
 
     private void ResolveReferences()
@@ -77,21 +91,72 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (scoreText == null)
         {
-            Transform t = transform.Find("ScoreText");
-            if (t != null) scoreText = t.GetComponent<Text>();
+            Transform t = transform.Find("SafeArea/CommandBar/ScoreModule/ScoreValue");
+            if (t != null) scoreText = t.GetComponent<TMP_Text>();
         }
 
         if (timerText == null)
-            timerText = GetComponentInChildren<Text>();
+        {
+            Transform t = transform.Find("SafeArea/CommandBar/TimerModule/TimerValue");
+            if (t != null) timerText = t.GetComponent<TMP_Text>();
+        }
 
         if (surgeMeterText == null)
         {
-            Transform t = transform.Find("SurgeMeterText");
-            if (t != null) surgeMeterText = t.GetComponent<Text>();
+            Transform t = transform.Find("SafeArea/CommandBar/SurgeModule/SurgeState");
+            if (t != null) surgeMeterText = t.GetComponent<TMP_Text>();
         }
+
+        if (surgeMeterFill == null)
+        {
+            Transform t = transform.Find("SafeArea/CommandBar/SurgeModule/MeterTrack/MeterFill");
+            if (t != null) surgeMeterFill = t.GetComponent<Image>();
+        }
+
+        if (surgeMeterGlow == null)
+        {
+            Transform t = transform.Find("SafeArea/CommandBar/SurgeModule/MeterTrack/MeterGlow");
+            if (t != null) surgeMeterGlow = t.GetComponent<Image>();
+        }
+
+        if (safeAreaRoot == null)
+        {
+            Transform t = transform.Find("SafeArea");
+            if (t != null) safeAreaRoot = t as RectTransform;
+        }
+
+        if (scoreValueRoot == null && scoreText != null)
+            scoreValueRoot = scoreText.rectTransform;
+        if (timerValueRoot == null && timerText != null)
+            timerValueRoot = timerText.rectTransform;
+        if (surgeValueRoot == null && surgeMeterText != null)
+            surgeValueRoot = surgeMeterText.rectTransform;
 
         if (tutorialController == null)
             tutorialController = FindAnyObjectByType<SurgeTutorialController>();
+    }
+
+    private void ApplySafeArea(bool force)
+    {
+        if (safeAreaRoot == null || Screen.width <= 0 || Screen.height <= 0)
+            return;
+
+        Rect safe = Screen.safeArea;
+        Vector2Int screen = new Vector2Int(Screen.width, Screen.height);
+        if (!force && safe == _lastSafeArea && screen == _lastScreenSize)
+            return;
+
+        safeAreaRoot.anchorMin = new Vector2(
+            Mathf.Clamp01(safe.xMin / Screen.width),
+            Mathf.Clamp01(safe.yMin / Screen.height));
+        safeAreaRoot.anchorMax = new Vector2(
+            Mathf.Clamp01(safe.xMax / Screen.width),
+            Mathf.Clamp01(safe.yMax / Screen.height));
+        safeAreaRoot.offsetMin = Vector2.zero;
+        safeAreaRoot.offsetMax = Vector2.zero;
+
+        _lastSafeArea = safe;
+        _lastScreenSize = screen;
     }
 
     private void CacheInitialColors()
@@ -130,6 +195,10 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         // 1. Score Counter with smooth arcade roll
         int targetScore = driver.Score;
+        if (_lastTargetScore >= 0 && targetScore > _lastTargetScore)
+            _scorePunch = 1f;
+        _lastTargetScore = targetScore;
+
         if (forceImmediate)
         {
             _displayedScore = targetScore;
@@ -143,7 +212,7 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (scoreText != null)
         {
-            scoreText.text = $"SCORE {Mathf.RoundToInt(_displayedScore):D6}";
+            scoreText.SetText("{0:000000}", Mathf.RoundToInt(_displayedScore));
         }
 
         // 2. Timer Countdown (mm:ss) + 10s urgent pulse
@@ -154,7 +223,7 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (timerText != null)
         {
-            timerText.text = $"{minutes:D2}:{seconds:D2}";
+            timerText.SetText("{0:00}:{1:00}", minutes, seconds);
 
             if (remainingSec <= 10 && remainingSec > 0)
             {
@@ -176,20 +245,74 @@ public sealed class SurgeHUDController : MonoBehaviour
                 // Active frenzy mode: pulse accent color
                 float pulse = Mathf.PingPong(Time.unscaledTime * 6f, 1f);
                 surgeMeterText.color = Color.Lerp(palette != null ? palette.neonPink : Color.magenta, Color.white, pulse);
-                surgeMeterText.text = "SURGE ACTIVE!";
+                surgeMeterText.SetText("ACTIVE");
             }
             else if (driver.Banked)
             {
                 // Banked & ready to pop
                 float pulse = Mathf.PingPong(Time.unscaledTime * 3f, 1f);
                 surgeMeterText.color = Color.Lerp(surgeReadyColor, Color.white, pulse);
-                surgeMeterText.text = "SURGE READY!";
+                surgeMeterText.SetText("READY");
             }
             else
             {
                 surgeMeterText.color = _initialMeterColor;
-                surgeMeterText.text = $"SURGE {driver.Meter}%";
+                surgeMeterText.SetText("{0}%", driver.Meter);
             }
+        }
+
+        if (surgeMeterFill != null)
+        {
+            float targetFill = driver.SurgeActive || driver.Banked
+                ? 1f
+                : Mathf.Clamp01(driver.Meter / 100f);
+            surgeMeterFill.fillAmount = forceImmediate
+                ? targetFill
+                : Mathf.MoveTowards(surgeMeterFill.fillAmount, targetFill, Time.unscaledDeltaTime * 1.8f);
+        }
+
+        if (surgeMeterGlow != null)
+        {
+            bool energized = driver.SurgeActive || driver.Banked;
+            float pulse = energized
+                ? 0.24f + Mathf.PingPong(Time.unscaledTime * 1.8f, 0.34f)
+                : Mathf.Lerp(0.05f, 0.18f, driver.Meter / 100f);
+            Color glow = driver.SurgeActive
+                ? (palette != null ? palette.neonPink : Color.magenta)
+                : surgeReadyColor;
+            glow.a = pulse;
+            surgeMeterGlow.color = glow;
+        }
+    }
+
+    private void AnimatePresentation()
+    {
+        float dt = Time.unscaledDeltaTime;
+
+        if (scoreValueRoot != null)
+        {
+            _scorePunch = Mathf.MoveTowards(_scorePunch, 0f, dt * 4.5f);
+            float scale = 1f + Mathf.Sin(_scorePunch * Mathf.PI) * 0.075f;
+            scoreValueRoot.localScale = Vector3.one * scale;
+        }
+
+        if (timerValueRoot != null)
+        {
+            bool urgent = driver != null && driver.MatchRunning
+                && driver.RemainingMs > 0 && driver.RemainingMs <= 10000;
+            float pulse = urgent
+                ? 1f + Mathf.Sin(Time.unscaledTime * 8f) * 0.035f
+                : 1f;
+            timerValueRoot.localScale = Vector3.one * pulse;
+        }
+
+        if (surgeValueRoot != null)
+        {
+            bool energized = driver != null && (driver.SurgeActive || driver.Banked);
+            float pulse = energized
+                ? 1f + Mathf.Sin(Time.unscaledTime * 6f) * 0.03f
+                : 1f;
+            surgeValueRoot.localScale = Vector3.one * pulse;
         }
     }
 
@@ -203,7 +326,12 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (scoreText != null && result != null)
         {
-            scoreText.text = $"SCORE {result.Score:D6}";
+            scoreText.SetText("{0:000000}", result.Score);
+        }
+
+        if (surgeMeterFill != null)
+        {
+            surgeMeterFill.fillAmount = 0f;
         }
     }
 }
