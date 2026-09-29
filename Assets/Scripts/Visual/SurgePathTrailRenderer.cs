@@ -25,15 +25,15 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
     [SerializeField] private SurgePalette palette;
 
     [Header("Line Tuning")]
-    [SerializeField] private float lineWidth = 0.085f;
+    [SerializeField] private float lineWidth = 0.072f;
     [SerializeField] private float zOffset = -0.05f;
 
     [Header("Electric Current Tuning")]
     [SerializeField] private int segmentsPerLink = 8;
-    [SerializeField] private float arcDisplacement = 0.065f;
-    [SerializeField] private float arcFrequency = 36f;
-    [SerializeField] private float coreWidthMultiplier = 0.38f;
-    [SerializeField] private float glowWidthMultiplier = 1.9f;
+    [SerializeField] private float arcDisplacement = 0.042f;
+    [SerializeField] private float arcFrequency = 24f;
+    [SerializeField] private float coreWidthMultiplier = 0.34f;
+    [SerializeField] private float glowWidthMultiplier = 1.65f;
 
     private LineRenderer _line;       // Outer glowing neon corona
     private LineRenderer _coreLine;   // Inner white-hot electric plasma core
@@ -285,21 +285,20 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
                 // Envelope: Zero at capacitor nodes, maximum at center of link
                 float envelope = Mathf.Sin(t * Mathf.PI);
 
-                // High-voltage traveling electrical sine wave
-                float wave = Mathf.Sin(t * 14f - Time.time * 36f + i * 5.3f) * 0.35f;
+                // Traveling current gives the line motion without making its
+                // silhouette jump randomly between frames.
+                float wave = Mathf.Sin(t * 13f - Time.time * 28f + i * 5.3f) * 0.28f;
 
-                // High-speed Perlin noise for jagged lightning kinks
+                // Stable time-based Perlin noise keeps the arc electrical but
+                // visually connected to the same conductor.
                 float perlinOuter = (Mathf.PerlinNoise(t * 6f + i * 13.7f, timeNoise) - 0.5f) * 2f;
+                float microOuter = (Mathf.PerlinNoise(t * 19f + i * 31.1f, timeNoise * 1.8f) - 0.5f) * 0.36f;
+                float outerDisp = (perlinOuter + wave + microOuter) * baseAmp * envelope;
 
-                // Fast stochastic micro-jitter
-                float jitter = (Random.value - 0.5f) * 0.65f;
-
-                float outerDisp = (perlinOuter + wave + jitter) * baseAmp * envelope;
-
-                // Inner core crackles independently with higher frequency
-                float perlinCore = (Mathf.PerlinNoise(t * 10f + i * 29.3f, timeNoise * 1.4f) - 0.5f) * 2f;
-                float coreJitter = (Random.value - 0.5f) * 0.8f;
-                float coreDisp = (perlinCore + coreJitter) * (baseAmp * 0.85f) * envelope;
+                // The white-hot core follows the corona instead of drawing a
+                // second unrelated scribble over it.
+                float coreCrackle = (Mathf.PerlinNoise(t * 15f + i * 23.9f, timeNoise * 2.1f) - 0.5f) * 0.32f;
+                float coreDisp = (outerDisp * 0.62f) + (coreCrackle * baseAmp * envelope);
 
                 _outerPositions[pointIdx] = basePos + normal * outerDisp;
                 _corePositions[pointIdx] = basePos + normal * coreDisp;

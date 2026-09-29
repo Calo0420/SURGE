@@ -28,6 +28,7 @@ public sealed class VFXManager : MonoBehaviour
 
     [Header("Tuning")]
     [SerializeField] private float burstHdrIntensity = 2.0f;
+    [SerializeField] private bool enableAmbient;
 
     private SimpleVFXPool burstPool;
     private CallbackVFXPool<VFXShieldController> shieldPool;
@@ -74,13 +75,13 @@ public sealed class VFXManager : MonoBehaviour
             Debug.LogWarning($"{nameof(VFXManager)} has no electricityPrefab assigned; chain link VFX will be skipped.", this);
         }
 
-        if (ambientPrefab != null)
+        if (enableAmbient && ambientPrefab != null)
         {
             ambientInstance = Instantiate(ambientPrefab, transform);
             ambientInstance.Initialize(palette != null ? palette.hudPrimary : Color.white);
             ambientInstance.StartAmbient();
         }
-        else
+        else if (enableAmbient)
         {
             Debug.LogWarning($"{nameof(VFXManager)} has no ambientPrefab assigned; ambient background VFX will be skipped.", this);
         }

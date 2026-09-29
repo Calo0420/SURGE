@@ -46,11 +46,16 @@ namespace Surge.Runtime
         readonly BoardDelta _delta = new BoardDelta();
         SpriteRenderer[] _nodes;
         SpriteRenderer[] _sockets;
+        SpriteRenderer[] _halos;
         byte[] _shown;
         MatchDriver _driver;
         Sprite _generatedCore;
         Sprite _generatedSocket;
+        Sprite _generatedHalo;
         Material _nodeMaterial;
+
+        const float IdleIntensity = 0.58f;
+        const float InactivePathIntensity = 0.22f;
 
         /// Raised after every applied change, with the classified diff. The
         /// same BoardDelta instance is reused each time — read it inside the
@@ -95,7 +100,8 @@ namespace Surge.Runtime
                 Color baseCol = cellVal < colors.Length ? colors[cellVal] : Color.white;
 
                 float targetScale = nodeScale;
-                Color targetCol = baseCol;
+                Color targetCol = baseCol * IdleIntensity;
+                SpriteRenderer halo = _halos != null && i < _halos.Length ? _halos[i] : null;
 
                 if (inPath)
                 {
@@ -103,25 +109,47 @@ namespace Surge.Runtime
 
                     if (_pathIsLegal)
                     {
-                        float hum = 1f + 0.05f * Mathf.Sin(Time.time * 32f + pathIndex * 0.9f);
+                        float hum = 1f + 0.035f * Mathf.Sin(Time.time * 24f + pathIndex * 0.9f);
                         targetScale *= hum;
-                        targetCol = baseCol * 1.55f;
+                        targetCol = baseCol * 1.35f;
                     }
                     else
                     {
-                        targetCol = baseCol * 1.25f;
+                        targetCol = baseCol * 0.82f;
+                    }
+
+                    if (halo != null)
+                    {
+                        float haloPulse = 1f + 0.06f * Mathf.Sin(Time.time * 18f + pathIndex * 0.7f);
+                        halo.enabled = true;
+                        halo.transform.localScale = Vector3.Lerp(
+                            halo.transform.localScale,
+                            Vector3.one * 1.38f * haloPulse,
+                            dt * 18f);
+
+                        Color haloColor = baseCol * (_pathIsLegal ? 1.05f : 0.45f);
+                        haloColor.a = _pathIsLegal ? 0.42f : 0.18f;
+                        halo.color = Color.Lerp(halo.color, haloColor, dt * 20f);
                     }
                 }
                 else if (hasPath)
                 {
-                    targetCol = baseCol * 0.55f;
+                    targetCol = baseCol * InactivePathIntensity;
                     targetScale = nodeScale;
                 }
                 else if (_driver != null && _driver.MatchRunning && _driver.SurgeActive)
                 {
-                    float shimmer = 1.05f + 0.12f * Mathf.Sin(Time.time * 10f + i * 0.5f);
+                    float shimmer = 0.72f + 0.12f * Mathf.Sin(Time.time * 8f + i * 0.5f);
                     targetCol = baseCol * shimmer;
-                    targetScale = nodeScale * (1f + 0.035f * Mathf.Sin(Time.time * 8f + i * 0.35f));
+                    targetScale = nodeScale * (1f + 0.025f * Mathf.Sin(Time.time * 7f + i * 0.35f));
+                }
+
+                if (!inPath && halo != null && halo.enabled)
+                {
+                    Color fadedHalo = halo.color;
+                    fadedHalo.a = Mathf.MoveTowards(fadedHalo.a, 0f, dt * 5f);
+                    halo.color = fadedHalo;
+                    if (fadedHalo.a <= 0.001f) halo.enabled = false;
                 }
 
                 targetCol.a = 1f;
@@ -158,6 +186,7 @@ namespace Surge.Runtime
             Size = size;
             _nodes = new SpriteRenderer[size * size];
             _sockets = new SpriteRenderer[size * size];
+            _halos = new SpriteRenderer[size * size];
             _shown = new byte[size * size];
 
             if (_nodeMaterial == null)
@@ -165,6 +194,7 @@ namespace Surge.Runtime
 
             Sprite coreSprite = nodeSprite != null ? nodeSprite : GeneratedCoreSprite();
             Sprite socketSprite = GeneratedSocketSprite();
+            Sprite haloSprite = GeneratedHaloSprite();
 
             for (int i = 0; i < _nodes.Length; i++)
             {
@@ -186,11 +216,26 @@ namespace Surge.Runtime
                 socketSr.sharedMaterial = _nodeMaterial;
                 _sockets[i] = socketSr;
 
-                // 2. Glowing cyber capacitor lens (tinted with cell color)
+                // 2. Selection-only corona. Keeping this separate lets idle
+                // nodes stay crisp and below the global bloom threshold.
+                var haloObj = new GameObject("SelectionHalo");
+                haloObj.transform.SetParent(go.transform, false);
+                haloObj.transform.localPosition = Vector3.zero;
+                haloObj.transform.localScale = Vector3.one * 1.38f;
+
+                var haloSr = haloObj.AddComponent<SpriteRenderer>();
+                haloSr.sprite = haloSprite;
+                haloSr.sortingLayerName = sortingLayerName;
+                haloSr.sortingOrder = sortingOrder;
+                haloSr.sharedMaterial = _nodeMaterial;
+                haloSr.enabled = false;
+                _halos[i] = haloSr;
+
+                // 3. Glowing cyber capacitor lens (tinted with cell color)
                 var sr = go.AddComponent<SpriteRenderer>();
                 sr.sprite = coreSprite;
                 sr.sortingLayerName = sortingLayerName;
-                sr.sortingOrder = sortingOrder;
+                sr.sortingOrder = sortingOrder + 1;
                 sr.sharedMaterial = _nodeMaterial;
 
                 _nodes[i] = sr;
@@ -258,7 +303,10 @@ namespace Surge.Runtime
             }
 
             sr.enabled = true;
-            sr.color = value < colors.Length ? colors[value] : Color.magenta;
+            Color baseColor = value < colors.Length ? colors[value] : Color.magenta;
+            baseColor *= IdleIntensity;
+            baseColor.a = 1f;
+            sr.color = baseColor;
         }
 
         /// Replaces the colour table. Element 0 is the empty cell and is
@@ -413,6 +461,42 @@ namespace Surge.Runtime
             return _generatedCore;
         }
 
+        Sprite GeneratedHaloSprite()
+        {
+            if (_generatedHalo != null) return _generatedHalo;
+
+            const int px = 128;
+            var tex = new Texture2D(px, px, TextureFormat.RGBA32, false)
+            {
+                name = "SurgeHalo_Generated",
+                wrapMode = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+
+            float r = px * 0.5f;
+            var pixels = new Color32[px * px];
+            for (int y = 0; y < px; y++)
+            for (int x = 0; x < px; x++)
+            {
+                float dx = (x - r + 0.5f) / r;
+                float dy = (y - r + 0.5f) / r;
+                float d = Mathf.Sqrt(dx * dx + dy * dy);
+                float ring = Mathf.Exp(-Mathf.Pow((d - 0.66f) * 5.2f, 2f));
+                float falloff = Mathf.Clamp01(1f - d);
+                float alpha = Mathf.Clamp01(ring * 0.75f + falloff * 0.12f);
+                byte a = (byte)(alpha * 255f);
+                pixels[y * px + x] = new Color32(255, 255, 255, a);
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            _generatedHalo = Sprite.Create(tex, new Rect(0, 0, px, px),
+                                           new Vector2(0.5f, 0.5f), px);
+            _generatedHalo.name = "SurgeHalo_Generated";
+            return _generatedHalo;
+        }
+
         void OnDestroy()
         {
             if (_generatedCore != null)
@@ -424,6 +508,11 @@ namespace Surge.Runtime
             {
                 if (_generatedSocket.texture != null) Destroy(_generatedSocket.texture);
                 Destroy(_generatedSocket);
+            }
+            if (_generatedHalo != null)
+            {
+                if (_generatedHalo.texture != null) Destroy(_generatedHalo.texture);
+                Destroy(_generatedHalo);
             }
         }
 

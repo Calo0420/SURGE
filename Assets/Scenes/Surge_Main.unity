@@ -140,10 +140,10 @@ MonoBehaviour:
     m_Value: 0.8
   intensity:
     m_OverrideState: 1
-    m_Value: 0.55
+    m_Value: 0.42
   scatter:
     m_OverrideState: 1
-    m_Value: 0.85
+    m_Value: 0.62
   clamp:
     m_OverrideState: 1
     m_Value: 65472
@@ -619,7 +619,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: -47, y: -19}
+  m_AnchoredPosition: {x: 24, y: -19}
   m_SizeDelta: {x: 78, y: 78}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &695964023
