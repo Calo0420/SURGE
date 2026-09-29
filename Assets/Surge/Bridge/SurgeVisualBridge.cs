@@ -33,6 +33,7 @@ public sealed class SurgeVisualBridge : MonoBehaviour
     [Header("Visuals")]
     [SerializeField] private SurgePalette palette;
     [SerializeField] private VFXManager vfx;
+    [SerializeField] private SurgeHUDController hud;
 
     [Header("Match")]
     [Tooltip("Seed used until a real SkillzSeedSource is wired. See docs/DESIGN_LINEAGE.md.")]
@@ -88,6 +89,8 @@ public sealed class SurgeVisualBridge : MonoBehaviour
 
         boardView.Bind(driver);
         boardView.SetPalette(BuildColorTable());
+        if (hud == null)
+            hud = FindAnyObjectByType<SurgeHUDController>();
 
         if (SurgeSkillzMatchController.Instance == null)
         {
@@ -157,30 +160,57 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         // and classifies every changed cell, which is what the effects below
         // are driven from.
         BoardDelta delta = boardView.ApplyClear(result);
-        if (delta == null || vfx == null) return;
+        if (delta == null) return;
+
+        SurgeFeedbackTier tier = SurgeFeedback.Classify(result);
+        if (hud != null)
+            hud.PresentClear(result, tier);
+        if (vfx == null) return;
+
+        float burstScale = tier switch
+        {
+            SurgeFeedbackTier.Exceptional => 0.42f,
+            SurgeFeedbackTier.Strong => 0.36f,
+            _ => 0.30f
+        };
 
         // Cleared nodes burst in their own colour — read from the pre-clear
         // snapshot via the delta, since the cell already holds its new value.
+        byte clearedCellValue = 1;
+        bool foundClearedCell = false;
         foreach (CellDelta d in delta.Changed)
         {
             if (!delta.Cleared.Contains(d.Index)) continue;
-            vfx.SpawnClearBurst(boardView.WorldPositionOf(d.Index), ToVfxColor(d.From));
+            if (!foundClearedCell)
+            {
+                clearedCellValue = d.From;
+                foundClearedCell = true;
+            }
+            vfx.SpawnClearBurst(boardView.WorldPositionOf(d.Index), ToVfxColor(d.From), burstScale);
         }
 
-        // Match detonation: Every 3+ clear ripples out a sleek neon shockwave from the path center
-        if (result.Path != null && result.Path.Length >= 3)
+        SurgeVfxColor clearCol = ToVfxColor(clearedCellValue);
+
+        // Each tier gets one controlled center accent. Purge has its own
+        // presentation below and deliberately skips this generic detonation.
+        if (!result.Purge && result.Path != null && result.Path.Length >= 3)
         {
             Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
-            SurgeVfxColor clearCol = ToVfxColor(delta.Changed.Count > 0 ? delta.Changed[0].From : (byte)1);
-
-            // Dynamic scale: 0.55f for 3-node clears, expanding up to 1.15f for long chains
-            float shockScale = Mathf.Clamp(0.55f + (result.Path.Length - 3) * 0.12f, 0.55f, 1.15f);
+            float shockScale = tier switch
+            {
+                SurgeFeedbackTier.Exceptional => 0.78f,
+                SurgeFeedbackTier.Strong => 0.58f,
+                _ => 0.38f
+            };
             vfx.PlayShockwave(center, clearCol, shockScale);
 
-            // Heavy Clear: 5+ nodes also detonates high-voltage lightning arcs across the center
-            if (result.Path.Length >= 5)
+            if (tier == SurgeFeedbackTier.Strong)
             {
-                vfx.PlayLightningBurst(center, clearCol, 0.85f);
+                vfx.PlayLightningBurst(center, clearCol, 0.48f);
+            }
+            else if (tier == SurgeFeedbackTier.Exceptional)
+            {
+                vfx.PlayLightningBurst(center, clearCol, 0.64f);
             }
         }
 
@@ -190,17 +220,23 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             int a = result.Path[0], b = result.Path[result.Path.Length - 1];
             Vector3 from = boardView.WorldPositionOf(a);
             Vector3 to = boardView.WorldPositionOf(b);
+            int sparkCount = tier switch
+            {
+                SurgeFeedbackTier.Exceptional => 14,
+                SurgeFeedbackTier.Strong => 10,
+                _ => 6
+            };
             vfx.EmitSparkStreak(from, ((Vector2)(to - from)).normalized,
-                                ToVfxColor(driver.Engine.Board.Cells[b]));
+                                clearCol, sparkCount);
         }
 
-        // Purge freeze celebration (EMP Implosion + mega-shockwave in neon blue)
+        // Purge keeps its identity without stacking an oversized generic clear.
         if (result.Purge && result.Path != null && result.Path.Length > 0)
         {
             Vector3 center = boardView.WorldPositionOf(result.Path[result.Path.Length / 2]);
             vfx.PlayPurgeFreeze(center);
-            vfx.PlayImplosion(center, SurgeVfxColor.NeonBlue, 1.1f);
-            vfx.PlayShockwave(center, SurgeVfxColor.NeonBlue, 1.4f);
+            vfx.PlayImplosion(center, SurgeVfxColor.NeonBlue, 0.82f);
+            vfx.PlayShockwave(center, SurgeVfxColor.NeonBlue, 0.92f);
         }
 
         // Combo pop on multiplier chains
@@ -208,13 +244,13 @@ public sealed class SurgeVisualBridge : MonoBehaviour
         {
             Vector3 lastPos = boardView.WorldPositionOf(result.Path[result.Path.Length - 1]);
             vfx.PlayComboPop(lastPos);
-            vfx.PlayShockwave(lastPos, SurgeVfxColor.NeonYellow, 0.5f);
         }
 
         // Electricity arcs along cascading cells
         if (delta.Fell != null && delta.Fell.Count >= 2)
         {
-            for (int i = 0; i < delta.Fell.Count - 1 && i < 4; i++)
+            int arcBudget = tier == SurgeFeedbackTier.Exceptional ? 3 : 2;
+            for (int i = 0; i < delta.Fell.Count - 1 && i < arcBudget; i++)
             {
                 int idxA = delta.Fell[i];
                 int idxB = delta.Fell[i + 1];
@@ -240,6 +276,13 @@ public sealed class SurgeVisualBridge : MonoBehaviour
 
             if (SurgeAudioManager.Instance != null)
                 SurgeAudioManager.Instance.PlaySurgeActivation();
+
+            if (HapticManager.Instance != null)
+                HapticManager.Instance.PlayHeavy();
+        }
+        else if (!isSurge && _wasSurgeActive && vfx != null && boardView != null)
+        {
+            vfx.PlaySurgeRelease(boardView.transform.position);
         }
         _wasSurgeActive = isSurge;
 

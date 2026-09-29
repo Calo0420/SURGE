@@ -232,6 +232,7 @@ namespace Surge.Runtime
                 socketSr.sortingLayerName = sortingLayerName;
                 socketSr.sortingOrder = sortingOrder - 1;
                 socketSr.sharedMaterial = _nodeMaterial;
+                socketSr.color = Color.white;
                 _sockets[i] = socketSr;
 
                 // 2. Selection-only corona. Keeping this separate lets idle
@@ -357,6 +358,7 @@ namespace Surge.Runtime
                 {
                     _nodes[i].enabled = true;
                     SetNodeColor(i, before[i], 1.15f);
+                    SetSocketCharge(i, before[i], 0.45f);
                 }
                 else if (moves)
                 {
@@ -397,6 +399,8 @@ namespace Surge.Runtime
                             EaseOut(t));
                         flash.a = 1f - Mathf.Clamp01((t - 0.62f) / 0.38f);
                         _nodes[index].color = flash;
+                        SetSocketCharge(index, before[index],
+                                       0.35f + Mathf.Sin(t * Mathf.PI) * 0.55f);
                     }
                 }
 
@@ -443,6 +447,10 @@ namespace Surge.Runtime
             while (travelElapsed < travelDuration)
             {
                 travelElapsed += Time.unscaledDeltaTime;
+                float residualCharge = 1f - Mathf.Clamp01(travelElapsed / travelDuration);
+
+                foreach (int index in cleared)
+                    SetSocketCharge(index, before[index], residualCharge * 0.35f);
 
                 for (int i = 0; i < _nodes.Length; i++)
                 {
@@ -487,6 +495,8 @@ namespace Surge.Runtime
             {
                 _transitioning[i] = false;
                 ResetVisual(i);
+                if (_sockets != null && i < _sockets.Length && _sockets[i] != null)
+                    _sockets[i].color = Color.white;
                 Paint(i, _shown[i]);
             }
         }
@@ -507,6 +517,16 @@ namespace Surge.Runtime
             Color color = ColorForValue(value) * intensity;
             color.a = 1f;
             _nodes[index].color = color;
+        }
+
+        void SetSocketCharge(int index, byte value, float strength)
+        {
+            if (_sockets == null || index < 0 || index >= _sockets.Length ||
+                _sockets[index] == null) return;
+
+            Color charge = ColorForValue(value) * 1.15f;
+            charge.a = 1f;
+            _sockets[index].color = Color.Lerp(Color.white, charge, Mathf.Clamp01(strength));
         }
 
         Color ColorForValue(byte value) =>

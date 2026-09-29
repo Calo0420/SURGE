@@ -358,16 +358,7 @@ public sealed class SurgePathTrailRenderer : MonoBehaviour
         ClearLines();
 
         if (HapticManager.Instance != null)
-        {
-            if (result.Purge || (result.Path != null && result.Path.Length >= 5))
-            {
-                HapticManager.Instance.PlayHeavy();
-            }
-            else
-            {
-                HapticManager.Instance.PlayMedium();
-            }
-        }
+            HapticManager.Instance.PlayClear(SurgeFeedback.Classify(result));
 
         if (SurgeAudioManager.Instance != null)
         {

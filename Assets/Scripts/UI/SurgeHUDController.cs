@@ -29,6 +29,7 @@ public sealed class SurgeHUDController : MonoBehaviour
     [SerializeField] private RectTransform scoreValueRoot;
     [SerializeField] private RectTransform timerValueRoot;
     [SerializeField] private RectTransform surgeValueRoot;
+    [SerializeField] private TMP_Text feedbackText;
 
     [Header("Styling")]
     [SerializeField] private SurgePalette palette;
@@ -46,6 +47,13 @@ public sealed class SurgeHUDController : MonoBehaviour
     private float _scorePunch;
     private Rect _lastSafeArea;
     private Vector2Int _lastScreenSize;
+    private int _lastMeter = -1;
+    private bool _wasBanked;
+    private bool _wasSurgeActive;
+    private float _surgePunch;
+    private float _meterGainPulse;
+    private float _feedbackLife;
+    private Vector2 _feedbackBasePosition;
 
     public void OpenTutorial()
     {
@@ -56,6 +64,7 @@ public sealed class SurgeHUDController : MonoBehaviour
     private void Awake()
     {
         ResolveReferences();
+        EnsureFeedbackText();
         CacheInitialColors();
         ApplySafeArea(force: true);
     }
@@ -134,6 +143,70 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (tutorialController == null)
             tutorialController = FindAnyObjectByType<SurgeTutorialController>();
+    }
+
+    private void EnsureFeedbackText()
+    {
+        if (feedbackText != null)
+        {
+            _feedbackBasePosition = feedbackText.rectTransform.anchoredPosition;
+            return;
+        }
+
+        if (safeAreaRoot == null)
+            return;
+
+        Transform commandBar = safeAreaRoot.Find("CommandBar");
+        if (commandBar == null)
+            return;
+
+        GameObject go = new GameObject("FeedbackText", typeof(RectTransform),
+                                       typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        RectTransform rect = go.GetComponent<RectTransform>();
+        rect.SetParent(commandBar, false);
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.anchoredPosition = new Vector2(0f, -5f);
+        rect.sizeDelta = new Vector2(0f, 34f);
+        _feedbackBasePosition = rect.anchoredPosition;
+
+        feedbackText = go.GetComponent<TextMeshProUGUI>();
+        feedbackText.alignment = TextAlignmentOptions.Center;
+        feedbackText.font = scoreText != null ? scoreText.font : null;
+        feedbackText.fontSize = 20f;
+        feedbackText.fontStyle = FontStyles.Bold;
+        feedbackText.raycastTarget = false;
+        feedbackText.textWrappingMode = TextWrappingModes.NoWrap;
+        feedbackText.alpha = 0f;
+    }
+
+    public void PresentClear(ClearResult result, SurgeFeedbackTier tier)
+    {
+        if (result == null || feedbackText == null)
+            return;
+
+        string label;
+        if (result.Purge)
+            label = "COLOR PURGE";
+        else if (result.ChainMult > 1)
+            label = $"CHAIN x{result.ChainMult}";
+        else if (tier == SurgeFeedbackTier.Exceptional)
+            label = "OVERLOAD";
+        else if (tier == SurgeFeedbackTier.Strong)
+            label = "POWER LINK";
+        else
+            return;
+
+        feedbackText.text = $"{label}  +{result.Points}";
+        feedbackText.color = tier == SurgeFeedbackTier.Exceptional
+            ? (palette != null ? palette.neonPink : Color.magenta)
+            : surgeReadyColor;
+        feedbackText.alpha = 1f;
+        feedbackText.rectTransform.anchoredPosition = _feedbackBasePosition;
+        feedbackText.rectTransform.localScale = Vector3.one * 0.92f;
+        _feedbackLife = 1f;
+        _scorePunch = 1f;
     }
 
     private void ApplySafeArea(bool force)
@@ -238,16 +311,31 @@ public sealed class SurgeHUDController : MonoBehaviour
         }
 
         // 3. Surge Meter (% fill and surge states)
+        bool isSurgeActive = driver.SurgeActive;
+        bool isBanked = driver.Banked;
+        if (isSurgeActive && !_wasSurgeActive)
+            _surgePunch = 1f;
+        else if (isBanked && !_wasBanked)
+            _surgePunch = 0.8f;
+        else if (!isSurgeActive && _wasSurgeActive)
+            _surgePunch = 0.55f;
+
+        if (_lastMeter >= 0 && driver.Meter > _lastMeter)
+            _meterGainPulse = Mathf.Clamp01((driver.Meter - _lastMeter) / 20f + 0.35f);
+        _lastMeter = driver.Meter;
+        _wasSurgeActive = isSurgeActive;
+        _wasBanked = isBanked;
+
         if (surgeMeterText != null)
         {
-            if (driver.SurgeActive)
+            if (isSurgeActive)
             {
                 // Active frenzy mode: pulse accent color
                 float pulse = Mathf.PingPong(Time.unscaledTime * 6f, 1f);
                 surgeMeterText.color = Color.Lerp(palette != null ? palette.neonPink : Color.magenta, Color.white, pulse);
                 surgeMeterText.SetText("ACTIVE");
             }
-            else if (driver.Banked)
+            else if (isBanked)
             {
                 // Banked & ready to pop
                 float pulse = Mathf.PingPong(Time.unscaledTime * 3f, 1f);
@@ -263,7 +351,7 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (surgeMeterFill != null)
         {
-            float targetFill = driver.SurgeActive || driver.Banked
+            float targetFill = isSurgeActive || isBanked
                 ? 1f
                 : Mathf.Clamp01(driver.Meter / 100f);
             surgeMeterFill.fillAmount = forceImmediate
@@ -273,11 +361,12 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         if (surgeMeterGlow != null)
         {
-            bool energized = driver.SurgeActive || driver.Banked;
+            bool energized = isSurgeActive || isBanked;
             float pulse = energized
                 ? 0.24f + Mathf.PingPong(Time.unscaledTime * 1.8f, 0.34f)
                 : Mathf.Lerp(0.05f, 0.18f, driver.Meter / 100f);
-            Color glow = driver.SurgeActive
+            pulse = Mathf.Clamp01(pulse + _meterGainPulse * 0.22f);
+            Color glow = isSurgeActive
                 ? (palette != null ? palette.neonPink : Color.magenta)
                 : surgeReadyColor;
             glow.a = pulse;
@@ -288,6 +377,8 @@ public sealed class SurgeHUDController : MonoBehaviour
     private void AnimatePresentation()
     {
         float dt = Time.unscaledDeltaTime;
+        _surgePunch = Mathf.MoveTowards(_surgePunch, 0f, dt * 2.8f);
+        _meterGainPulse = Mathf.MoveTowards(_meterGainPulse, 0f, dt * 3.5f);
 
         if (scoreValueRoot != null)
         {
@@ -312,7 +403,25 @@ public sealed class SurgeHUDController : MonoBehaviour
             float pulse = energized
                 ? 1f + Mathf.Sin(Time.unscaledTime * 6f) * 0.03f
                 : 1f;
-            surgeValueRoot.localScale = Vector3.one * pulse;
+            float punch = 1f + Mathf.Sin(_surgePunch * Mathf.PI) * 0.11f;
+            surgeValueRoot.localScale = Vector3.one * pulse * punch;
+        }
+
+        if (surgeMeterFill != null)
+        {
+            float meterPulse = 1f + Mathf.Sin(_meterGainPulse * Mathf.PI) * 0.08f;
+            surgeMeterFill.rectTransform.localScale = new Vector3(1f, meterPulse, 1f);
+        }
+
+        if (feedbackText != null && _feedbackLife > 0f)
+        {
+            _feedbackLife = Mathf.MoveTowards(_feedbackLife, 0f, dt * 1.25f);
+            float reveal = 1f - _feedbackLife;
+            feedbackText.alpha = Mathf.Clamp01(_feedbackLife * 1.8f);
+            feedbackText.rectTransform.anchoredPosition =
+                _feedbackBasePosition + Vector2.up * reveal * 8f;
+            feedbackText.rectTransform.localScale =
+                Vector3.one * Mathf.Lerp(0.92f, 1f, Mathf.Clamp01(reveal * 4f));
         }
     }
 

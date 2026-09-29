@@ -140,13 +140,17 @@ public sealed class SurgeAudioManager : MonoBehaviour
         {
             _sfxSource.PlayOneShot(purgeClip, sfxVolume);
         }
+        else if (nodeCount >= 7 && heavyClearClip != null)
+        {
+            _sfxSource.PlayOneShot(heavyClearClip, sfxVolume * 1.0f);
+        }
         else if (nodeCount >= 5 && heavyClearClip != null)
         {
-            _sfxSource.PlayOneShot(heavyClearClip, sfxVolume);
+            _sfxSource.PlayOneShot(heavyClearClip, sfxVolume * 0.78f);
         }
         else if (nodeTickClip != null)
         {
-            _sfxSource.PlayOneShot(nodeTickClip, sfxVolume * 0.9f);
+            _sfxSource.PlayOneShot(nodeTickClip, sfxVolume * 0.62f);
         }
     }
 

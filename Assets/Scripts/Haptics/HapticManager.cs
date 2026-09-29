@@ -87,4 +87,12 @@ public class HapticManager : MonoBehaviour
         Handheld.Vibrate();
 #endif
     }
+
+    public void PlayClear(SurgeFeedbackTier tier)
+    {
+        if (tier == SurgeFeedbackTier.Standard)
+            PlayMedium();
+        else
+            PlayHeavy();
+    }
 }

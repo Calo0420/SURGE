@@ -166,10 +166,9 @@ public sealed class VFXManager : MonoBehaviour
         }
     }
 
-    public void SpawnClearBurst(Vector3 worldPosition, SurgeVfxColor colorId)
+    public void SpawnClearBurst(Vector3 worldPosition, SurgeVfxColor colorId, float scale = 0.30f)
     {
-        // High-voltage electric impact burst at the capacitor terminal
-        PlayImpactBurst(worldPosition, colorId, 0.55f);
+        PlayImpactBurst(worldPosition, colorId, scale);
     }
 
     public void EmitSparkStreak(Vector3 worldPosition, Vector2 direction, SurgeVfxColor colorId, int count = 12)
@@ -198,14 +197,13 @@ public sealed class VFXManager : MonoBehaviour
     /// </summary>
     public void PlaySurgeOverdrive(Vector3 center, float halfExtent = 3.65f)
     {
-        // 1. Sleek perimeter shockwave around the frame border
-        PlayShockwave(center, SurgeVfxColor.NeonPink, 1.25f);
+        PlayShockwave(center, SurgeVfxColor.NeonPink, 0.92f);
 
         // 2. High-speed electrical spark streaks racing across top and bottom rails
         Vector3 topRail = center + new Vector3(-halfExtent, halfExtent, 0f);
         Vector3 botRail = center + new Vector3(halfExtent, -halfExtent, 0f);
-        EmitSparkStreak(topRail, Vector2.right, SurgeVfxColor.NeonPink, 16);
-        EmitSparkStreak(botRail, Vector2.left, SurgeVfxColor.NeonPink, 16);
+        EmitSparkStreak(topRail, Vector2.right, SurgeVfxColor.NeonPink, 12);
+        EmitSparkStreak(botRail, Vector2.left, SurgeVfxColor.NeonPink, 12);
 
         // 3. Quick electric arcs at the frame corners
         Vector3 c1 = center + new Vector3(-halfExtent, halfExtent, 0f);
@@ -217,6 +215,11 @@ public sealed class VFXManager : MonoBehaviour
         PlayChainLink(c2, c3, SurgeVfxColor.NeonPink);
         PlayChainLink(c3, c4, SurgeVfxColor.NeonPink);
         PlayChainLink(c4, c1, SurgeVfxColor.NeonPink);
+    }
+
+    public void PlaySurgeRelease(Vector3 center)
+    {
+        PlayShield(center, SurgeVfxColor.NeonBlue, localScale: 0.42f, simSpeed: 1.8f);
     }
 
     /// <summary>Purge Freeze: mid-scale Shield flash in blue.</summary>
