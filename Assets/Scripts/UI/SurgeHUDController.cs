@@ -16,6 +16,8 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class SurgeHUDController : MonoBehaviour
 {
+    private static Sprite _roundedButtonSprite;
+
     [Header("Engine Seam")]
     [SerializeField] private MatchDriver driver;
 
@@ -31,6 +33,11 @@ public sealed class SurgeHUDController : MonoBehaviour
     [SerializeField] private RectTransform surgeValueRoot;
     [SerializeField] private TMP_Text feedbackText;
     [SerializeField] private Button surgeButton;
+    [SerializeField] private RectTransform surgeButtonRoot;
+    [SerializeField] private Image surgeButtonBackground;
+    [SerializeField] private Image surgeButtonAccent;
+    [SerializeField] private TMP_Text surgeButtonText;
+    [SerializeField] private CanvasGroup surgeButtonGroup;
     [SerializeField] private Button tutorialButton;
 
     [Header("Styling")]
@@ -56,6 +63,8 @@ public sealed class SurgeHUDController : MonoBehaviour
     private float _meterGainPulse;
     private float _feedbackLife;
     private Vector2 _feedbackBasePosition;
+    private Vector2 _surgeButtonBasePosition;
+    private bool _surgeButtonUsesBottomLayout;
 
     public void OpenTutorial()
     {
@@ -151,23 +160,65 @@ public sealed class SurgeHUDController : MonoBehaviour
 
     private void EnsureSurgeButton()
     {
-        if (surgeButton == null && surgeMeterText != null)
+        if (surgeButton == null && safeAreaRoot != null)
         {
-            Transform module = surgeMeterText.transform.parent;
-            if (module != null)
-            {
-                surgeButton = module.GetComponent<Button>();
-                if (surgeButton == null)
-                    surgeButton = module.gameObject.AddComponent<Button>();
+            GameObject go = new GameObject(
+                "SurgeActionButton", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(Image), typeof(Button), typeof(CanvasGroup));
+            go.transform.SetParent(safeAreaRoot, false);
 
-                surgeButton.transition = Selectable.Transition.None;
-                Image target = module.GetComponent<Image>();
-                if (target != null)
-                {
-                    target.raycastTarget = true;
-                    surgeButton.targetGraphic = target;
-                }
-            }
+            surgeButtonRoot = go.GetComponent<RectTransform>();
+            surgeButtonBackground = go.GetComponent<Image>();
+            surgeButtonBackground.sprite = CreateRoundedButtonSprite();
+            surgeButtonBackground.type = Image.Type.Sliced;
+            surgeButtonBackground.color = new Color(0.025f, 0.08f, 0.14f, 0.98f);
+
+            Outline outline = go.AddComponent<Outline>();
+            outline.effectColor = new Color(0.24f, 0.86f, 1f, 0.82f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            surgeButton = go.GetComponent<Button>();
+            surgeButton.targetGraphic = surgeButtonBackground;
+
+            surgeButtonGroup = go.GetComponent<CanvasGroup>();
+            surgeButtonGroup.alpha = 0f;
+            surgeButtonGroup.interactable = false;
+            surgeButtonGroup.blocksRaycasts = false;
+
+            GameObject textGo = new GameObject(
+                "Text", typeof(RectTransform), typeof(CanvasRenderer),
+                typeof(TextMeshProUGUI));
+            textGo.transform.SetParent(go.transform, false);
+            RectTransform textRect = textGo.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(10f, 8f);
+            textRect.offsetMax = new Vector2(-10f, -8f);
+
+            surgeButtonText = textGo.GetComponent<TextMeshProUGUI>();
+            surgeButtonText.font = scoreText != null ? scoreText.font : null;
+            surgeButtonText.fontSize = 24f;
+            surgeButtonText.fontStyle = FontStyles.Bold;
+            surgeButtonText.alignment = TextAlignmentOptions.Center;
+            surgeButtonText.color = Color.white;
+            surgeButtonText.text = "<size=14>SURGE</size>\nACTIVATE";
+            surgeButtonText.raycastTarget = false;
+
+            GameObject accentGo = new GameObject(
+                "ChargeRail", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            accentGo.transform.SetParent(go.transform, false);
+            RectTransform accentRect = accentGo.GetComponent<RectTransform>();
+            accentRect.anchorMin = new Vector2(0.16f, 0f);
+            accentRect.anchorMax = new Vector2(0.84f, 0f);
+            accentRect.pivot = new Vector2(0.5f, 0f);
+            accentRect.anchoredPosition = new Vector2(0f, 6f);
+            accentRect.sizeDelta = new Vector2(0f, 5f);
+
+            surgeButtonAccent = accentGo.GetComponent<Image>();
+            surgeButtonAccent.sprite = surgeButtonBackground.sprite;
+            surgeButtonAccent.type = Image.Type.Sliced;
+            surgeButtonAccent.color = new Color(1f, 0.16f, 0.52f, 0.95f);
+            surgeButtonAccent.raycastTarget = false;
         }
 
         if (surgeButton == null)
@@ -176,6 +227,33 @@ public sealed class SurgeHUDController : MonoBehaviour
         surgeButton.onClick.RemoveListener(OnSurgePressed);
         surgeButton.onClick.AddListener(OnSurgePressed);
         surgeButton.interactable = false;
+        UpdateSurgeButtonLayout();
+    }
+
+    private void UpdateSurgeButtonLayout()
+    {
+        if (surgeButtonRoot == null || Screen.height <= 0)
+            return;
+
+        _surgeButtonUsesBottomLayout = (float)Screen.width / Screen.height < 1.35f;
+        if (_surgeButtonUsesBottomLayout)
+        {
+            surgeButtonRoot.anchorMin = surgeButtonRoot.anchorMax =
+                new Vector2(0.5f, 0f);
+            surgeButtonRoot.pivot = new Vector2(0.5f, 0f);
+            surgeButtonRoot.sizeDelta = new Vector2(280f, 88f);
+            surgeButtonRoot.anchoredPosition = new Vector2(0f, 32f);
+        }
+        else
+        {
+            surgeButtonRoot.anchorMin = surgeButtonRoot.anchorMax =
+                new Vector2(1f, 0.5f);
+            surgeButtonRoot.pivot = new Vector2(1f, 0.5f);
+            surgeButtonRoot.sizeDelta = new Vector2(230f, 96f);
+            surgeButtonRoot.anchoredPosition = new Vector2(-34f, -18f);
+        }
+
+        _surgeButtonBasePosition = surgeButtonRoot.anchoredPosition;
     }
 
     private void EnsureTutorialButton()
@@ -230,6 +308,14 @@ public sealed class SurgeHUDController : MonoBehaviour
             return;
 
         _surgePunch = 1f;
+        if (surgeButton != null)
+            surgeButton.interactable = false;
+        if (surgeButtonGroup != null)
+        {
+            surgeButtonGroup.alpha = 0f;
+            surgeButtonGroup.interactable = false;
+            surgeButtonGroup.blocksRaycasts = false;
+        }
         if (feedbackText != null)
         {
             feedbackText.text = "SURGE ENGAGED";
@@ -325,6 +411,7 @@ public sealed class SurgeHUDController : MonoBehaviour
 
         _lastSafeArea = safe;
         _lastScreenSize = screen;
+        UpdateSurgeButtonLayout();
     }
 
     private void CacheInitialColors()
@@ -437,7 +524,7 @@ public sealed class SurgeHUDController : MonoBehaviour
                 surgeMeterText.color = Color.Lerp(surgeReadyColor, Color.white, pulse);
                 int fuseSeconds = Mathf.Max(1,
                     Mathf.CeilToInt(driver.BankFuseRemainingMs / 1000f));
-                surgeMeterText.SetText("TAP READY  {0}", fuseSeconds);
+                surgeMeterText.SetText("READY  {0}", fuseSeconds);
             }
             else
             {
@@ -470,8 +557,25 @@ public sealed class SurgeHUDController : MonoBehaviour
             surgeMeterGlow.color = glow;
         }
 
+        bool canActivate = isBanked && !driver.IsPaused && !driver.IsFrozen;
         if (surgeButton != null)
-            surgeButton.interactable = isBanked && !driver.IsPaused && !driver.IsFrozen;
+            surgeButton.interactable = canActivate;
+        if (surgeButtonGroup != null)
+        {
+            surgeButtonGroup.interactable = canActivate;
+            surgeButtonGroup.blocksRaycasts = canActivate;
+            float targetAlpha = isBanked ? 1f : 0f;
+            surgeButtonGroup.alpha = forceImmediate
+                ? targetAlpha
+                : Mathf.MoveTowards(
+                    surgeButtonGroup.alpha, targetAlpha, Time.unscaledDeltaTime * 8f);
+        }
+        if (surgeButtonText != null && isBanked)
+        {
+            int fuseSeconds = Mathf.Max(1,
+                Mathf.CeilToInt(driver.BankFuseRemainingMs / 1000f));
+            surgeButtonText.SetText("<size=14>SURGE</size>\nACTIVATE  {0}", fuseSeconds);
+        }
     }
 
     private void AnimatePresentation()
@@ -513,6 +617,40 @@ public sealed class SurgeHUDController : MonoBehaviour
             surgeMeterFill.rectTransform.localScale = new Vector3(1f, meterPulse, 1f);
         }
 
+        if (surgeButtonRoot != null && surgeButtonGroup != null)
+        {
+            float reveal = surgeButtonGroup.alpha;
+            Vector2 hiddenOffset = _surgeButtonUsesBottomLayout
+                ? Vector2.down * 28f
+                : Vector2.right * 34f;
+            surgeButtonRoot.anchoredPosition =
+                _surgeButtonBasePosition + hiddenOffset * (1f - reveal);
+
+            float readyPulse = reveal > 0.01f
+                ? 1f + Mathf.Sin(Time.unscaledTime * 7f) * 0.045f
+                : 0.94f;
+            surgeButtonRoot.localScale = Vector3.one * readyPulse;
+
+            if (surgeButtonBackground != null)
+            {
+                float colorPulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 6f);
+                Color bright = Color.Lerp(
+                    new Color(0.025f, 0.08f, 0.14f, 0.98f),
+                    new Color(0.08f, 0.28f, 0.38f, 0.98f),
+                    colorPulse);
+                surgeButtonBackground.color = bright;
+            }
+
+            if (surgeButtonAccent != null)
+            {
+                float accentPulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f);
+                surgeButtonAccent.color = Color.Lerp(
+                    new Color(1f, 0.16f, 0.52f, 0.82f),
+                    surgeReadyColor,
+                    accentPulse);
+            }
+        }
+
         if (feedbackText != null && _feedbackLife > 0f)
         {
             _feedbackLife = Mathf.MoveTowards(_feedbackLife, 0f, dt * 1.25f);
@@ -542,5 +680,42 @@ public sealed class SurgeHUDController : MonoBehaviour
         {
             surgeMeterFill.fillAmount = 0f;
         }
+    }
+
+    private static Sprite CreateRoundedButtonSprite()
+    {
+        if (_roundedButtonSprite != null)
+            return _roundedButtonSprite;
+
+        const int width = 128;
+        const int height = 64;
+        const float radius = 18f;
+        var texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
+        {
+            name = "SurgeActionButton_Rounded",
+            filterMode = FilterMode.Bilinear,
+            wrapMode = TextureWrapMode.Clamp
+        };
+
+        var pixels = new Color32[width * height];
+        for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+        {
+            float cx = x < radius ? radius : x >= width - radius ? width - radius - 1f : x;
+            float cy = y < radius ? radius : y >= height - radius ? height - radius - 1f : y;
+            float dx = x - cx;
+            float dy = y - cy;
+            float distance = Mathf.Sqrt(dx * dx + dy * dy);
+            float alpha = Mathf.Clamp01(radius - distance + 1f);
+            pixels[y * width + x] = new Color(1f, 1f, 1f, alpha);
+        }
+
+        texture.SetPixels32(pixels);
+        texture.Apply();
+        _roundedButtonSprite = Sprite.Create(
+            texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f),
+            100f, 0, SpriteMeshType.FullRect, new Vector4(20f, 20f, 20f, 20f));
+        _roundedButtonSprite.name = "SurgeActionButton_Rounded";
+        return _roundedButtonSprite;
     }
 }
