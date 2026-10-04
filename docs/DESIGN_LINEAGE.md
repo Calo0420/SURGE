@@ -25,6 +25,22 @@ decision was made the way it was.
 6. **Clue (reviewing v2)** — merged the v2 patch into a single
    `SurgeCore.cs`, confirmed the fix design is correct, and flagged one
    open action item for the Skillz agent (see below).
+7. **Core-design checkpoint (2026-10)** — playtesting showed that a player
+   could bank Surge but had no input wired to activate it, while the original
+   Purge rule occurred only three times in 140,000 simulated clears. The
+   existing deterministic seams were retained, but the player-facing rules
+   were clarified:
+   - A banked meter is activated explicitly by tapping the HUD's `READY`
+     control within the existing eight-second grace window.
+   - During active Surge, a connected clear of four or more capacitors removes
+     every remaining capacitor of that color before deterministic gravity and
+     refill. The action log still records only the player's path, so replay
+     derives the same Purge from the same seed, timestamp, configuration, and
+     path.
+   - Purge awards a 3,000-point bonus and keeps the existing 1.5-second
+     game-clock freeze.
+   - First-time standalone onboarding now teaches the exact rules and ends in
+     a self-contained practice simulation that never mutates match state.
 
 ## Open action items before this touches Unity
 

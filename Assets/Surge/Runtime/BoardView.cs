@@ -312,17 +312,18 @@ namespace Surge.Runtime
             _activePath.Clear();
             byte[] before = (byte[])_shown.Clone();
             byte[] cells = _driver.Engine.Board.Cells;
+            int[] clearedNodes = result?.ClearedNodes ?? result?.Path;
             BoardGeometry.Diff(_shown, cells,
-                               result?.Path, result?.NewNodes, _delta);
+                               clearedNodes, result?.NewNodes, _delta);
 
             Array.Copy(cells, _shown, cells.Length);
-            StartTransition(before, cells, result);
+            StartTransition(before, cells, result, clearedNodes);
 
             BoardChanged?.Invoke(_delta);
             return _delta;
         }
 
-        void StartTransition(byte[] before, byte[] after, ClearResult result)
+        void StartTransition(byte[] before, byte[] after, ClearResult result, int[] clearedNodes)
         {
             if (_transitionRoutine != null)
             {
@@ -331,19 +332,22 @@ namespace Surge.Runtime
                 SnapVisualsToShown();
             }
 
-            _transitionRoutine = StartCoroutine(AnimateTransition(before, after, result));
+            _transitionRoutine = StartCoroutine(
+                AnimateTransition(before, after, result, clearedNodes));
         }
 
-        IEnumerator AnimateTransition(byte[] before, byte[] after, ClearResult result)
+        IEnumerator AnimateTransition(byte[] before, byte[] after,
+                                      ClearResult result, int[] clearedNodes)
         {
-            int[] path = result?.Path;
+            int[] path = clearedNodes;
             var cleared = new HashSet<int>();
             if (path != null)
                 for (int i = 0; i < path.Length; i++)
                     if (path[i] >= 0 && path[i] < _nodes.Length)
                         cleared.Add(path[i]);
 
-            int[] sourceForDestination = BoardGeometry.BuildGravitySourceMap(before, path);
+            int[] sourceForDestination =
+                BoardGeometry.BuildGravitySourceMap(before, clearedNodes);
             float clearWindow = path == null || path.Length == 0
                 ? 0f
                 : (path.Length - 1) * ClearStagger + ClearDuration;

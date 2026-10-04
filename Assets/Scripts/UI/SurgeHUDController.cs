@@ -30,6 +30,8 @@ public sealed class SurgeHUDController : MonoBehaviour
     [SerializeField] private RectTransform timerValueRoot;
     [SerializeField] private RectTransform surgeValueRoot;
     [SerializeField] private TMP_Text feedbackText;
+    [SerializeField] private Button surgeButton;
+    [SerializeField] private Button tutorialButton;
 
     [Header("Styling")]
     [SerializeField] private SurgePalette palette;
@@ -57,13 +59,15 @@ public sealed class SurgeHUDController : MonoBehaviour
 
     public void OpenTutorial()
     {
-        if (tutorialController != null)
+        if (!SkillzCrossPlatform.IsMatchInProgress() && tutorialController != null)
             tutorialController.OpenTutorial();
     }
 
     private void Awake()
     {
         ResolveReferences();
+        EnsureSurgeButton();
+        EnsureTutorialButton();
         EnsureFeedbackText();
         CacheInitialColors();
         ApplySafeArea(force: true);
@@ -145,6 +149,97 @@ public sealed class SurgeHUDController : MonoBehaviour
             tutorialController = FindAnyObjectByType<SurgeTutorialController>();
     }
 
+    private void EnsureSurgeButton()
+    {
+        if (surgeButton == null && surgeMeterText != null)
+        {
+            Transform module = surgeMeterText.transform.parent;
+            if (module != null)
+            {
+                surgeButton = module.GetComponent<Button>();
+                if (surgeButton == null)
+                    surgeButton = module.gameObject.AddComponent<Button>();
+
+                surgeButton.transition = Selectable.Transition.None;
+                Image target = module.GetComponent<Image>();
+                if (target != null)
+                {
+                    target.raycastTarget = true;
+                    surgeButton.targetGraphic = target;
+                }
+            }
+        }
+
+        if (surgeButton == null)
+            return;
+
+        surgeButton.onClick.RemoveListener(OnSurgePressed);
+        surgeButton.onClick.AddListener(OnSurgePressed);
+        surgeButton.interactable = false;
+    }
+
+    private void EnsureTutorialButton()
+    {
+        if (tutorialButton != null || safeAreaRoot == null)
+            return;
+
+        Transform commandBar = safeAreaRoot.Find("CommandBar");
+        if (commandBar == null)
+            return;
+
+        GameObject go = new GameObject(
+            "TutorialButton", typeof(RectTransform), typeof(CanvasRenderer),
+            typeof(Image), typeof(Button));
+        go.transform.SetParent(commandBar, false);
+
+        RectTransform rect = go.GetComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(1f, 1f);
+        rect.pivot = new Vector2(1f, 1f);
+        rect.anchoredPosition = new Vector2(-8f, -8f);
+        rect.sizeDelta = new Vector2(42f, 42f);
+
+        Image image = go.GetComponent<Image>();
+        image.color = new Color(0.06f, 0.18f, 0.27f, 0.96f);
+        tutorialButton = go.GetComponent<Button>();
+        tutorialButton.targetGraphic = image;
+        tutorialButton.onClick.AddListener(OpenTutorial);
+        tutorialButton.gameObject.SetActive(!SkillzCrossPlatform.IsMatchInProgress());
+
+        GameObject textGo = new GameObject(
+            "Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
+        textGo.transform.SetParent(go.transform, false);
+        RectTransform textRect = textGo.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.offsetMin = Vector2.zero;
+        textRect.offsetMax = Vector2.zero;
+
+        TMP_Text text = textGo.GetComponent<TextMeshProUGUI>();
+        text.font = scoreText != null ? scoreText.font : null;
+        text.fontSize = 25f;
+        text.fontStyle = FontStyles.Bold;
+        text.alignment = TextAlignmentOptions.Center;
+        text.color = palette != null ? palette.hudPrimary : Color.cyan;
+        text.text = "?";
+        text.raycastTarget = false;
+    }
+
+    private void OnSurgePressed()
+    {
+        if (driver == null || !driver.TryCommitSurge())
+            return;
+
+        _surgePunch = 1f;
+        if (feedbackText != null)
+        {
+            feedbackText.text = "SURGE ENGAGED";
+            feedbackText.color = palette != null ? palette.neonPink : Color.magenta;
+            feedbackText.alpha = 1f;
+            feedbackText.rectTransform.anchoredPosition = _feedbackBasePosition;
+            _feedbackLife = 1f;
+        }
+    }
+
     private void EnsureFeedbackText()
     {
         if (feedbackText != null)
@@ -198,7 +293,7 @@ public sealed class SurgeHUDController : MonoBehaviour
         else
             return;
 
-        feedbackText.text = $"{label}  +{result.Points}";
+        feedbackText.text = $"{label}  +{result.Points + result.BonusPoints}";
         feedbackText.color = tier == SurgeFeedbackTier.Exceptional
             ? (palette != null ? palette.neonPink : Color.magenta)
             : surgeReadyColor;
@@ -340,7 +435,9 @@ public sealed class SurgeHUDController : MonoBehaviour
                 // Banked & ready to pop
                 float pulse = Mathf.PingPong(Time.unscaledTime * 3f, 1f);
                 surgeMeterText.color = Color.Lerp(surgeReadyColor, Color.white, pulse);
-                surgeMeterText.SetText("READY");
+                int fuseSeconds = Mathf.Max(1,
+                    Mathf.CeilToInt(driver.BankFuseRemainingMs / 1000f));
+                surgeMeterText.SetText("TAP READY  {0}", fuseSeconds);
             }
             else
             {
@@ -372,6 +469,9 @@ public sealed class SurgeHUDController : MonoBehaviour
             glow.a = pulse;
             surgeMeterGlow.color = glow;
         }
+
+        if (surgeButton != null)
+            surgeButton.interactable = isBanked && !driver.IsPaused && !driver.IsFrozen;
     }
 
     private void AnimatePresentation()

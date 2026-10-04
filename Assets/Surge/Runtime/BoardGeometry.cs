@@ -36,7 +36,7 @@ namespace Surge.Runtime
     {
         public readonly List<CellDelta> Changed = new List<CellDelta>();
 
-        /// Cells the player's path removed. Straight from ClearResult.Path.
+        /// Cells removed by the clear, including an intentional Color Purge.
         public readonly List<int> Cleared = new List<int>();
 
         /// Cells the refill stream created. Straight from ClearResult.NewNodes.
@@ -108,7 +108,7 @@ namespace Surge.Runtime
         /// that gravity moved into it. A value of -1 means the destination is
         /// a refill created above the board. This is presentation metadata
         /// only; it replays the same column compaction used by Diff.
-        public static int[] BuildGravitySourceMap(byte[] before, int[] path)
+        public static int[] BuildGravitySourceMap(byte[] before, int[] clearedNodes)
         {
             if (before == null) return new int[0];
 
@@ -123,7 +123,7 @@ namespace Surge.Runtime
                 for (int row = size - 1; row >= 0; row--)
                 {
                     int source = Index(row, col, size);
-                    if (Contains(path, source) || before[source] == 0) continue;
+                    if (Contains(clearedNodes, source) || before[source] == 0) continue;
 
                     int destination = Index(writeRow, col, size);
                     sources[destination] = source;
@@ -137,7 +137,7 @@ namespace Surge.Runtime
         // ----------------------------------------------------------- diff --
         /// Diffs two board snapshots and classifies every change.
         ///
-        /// `path` and `newNodes` come from ClearResult and may be null (the
+        /// `clearedNodes` and `newNodes` come from ClearResult and may be null (the
         /// first sync of a match, where the whole board is simply new).
         ///
         /// Classifying by "not in path and not in newNodes" is WRONG and was
@@ -151,7 +151,7 @@ namespace Surge.Runtime
         /// MatchEngine.ApplyGravityAndRefill. BoardDiffMatchesEngine in
         /// ci/Surge.Board.Tests pins that against the real engine.
         public static void Diff(byte[] before, byte[] after,
-                                int[] path, int[] newNodes, BoardDelta into)
+                                int[] clearedNodes, int[] newNodes, BoardDelta into)
         {
             into.Clear();
             if (before == null || after == null ||
@@ -169,16 +169,16 @@ namespace Surge.Runtime
                 });
             }
 
-            if (path != null)
-                foreach (int i in path) into.Cleared.Add(i);
+            if (clearedNodes != null)
+                foreach (int i in clearedNodes) into.Cleared.Add(i);
             if (newNodes != null)
                 foreach (int i in newNodes) into.Refilled.Add(i);
 
-            // Predict: clear the path, drop each column, then take the refill
+            // Predict: clear all removed nodes, drop each column, then take the refill
             // values from `after` at exactly the indices the engine reported.
             byte[] predicted = (byte[])before.Clone();
-            if (path != null)
-                foreach (int i in path) predicted[i] = 0;
+            if (clearedNodes != null)
+                foreach (int i in clearedNodes) predicted[i] = 0;
 
             for (int c = 0; c < size; c++)
             {

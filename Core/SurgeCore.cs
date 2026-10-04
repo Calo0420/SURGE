@@ -78,8 +78,9 @@ namespace SurgeCore
 
         public int SpeedChainWindowMs = 1500;
         public int MaxChainMult = 10;
-        public int PurgeBonus = 5000;
+        public int PurgeBonus = 3000;
         public int PurgeFreezeMs = 1500;
+        public int SurgePurgeMinLength = 4;
 
         public int MeterMax = 100;
         public int MeterGainLen3 = 4;
@@ -99,7 +100,7 @@ namespace SurgeCore
                         MaxChainMult, PurgeBonus, PurgeFreezeMs, MeterMax,
                         MeterGainLen3, MeterGainLen4, MeterGainLen5Plus,
                         SurgeDurationMs, SurgeBankGraceMs, SurgePairScore,
-                        SurgeChainStepPct, MaxSurgeMultPct };
+                        SurgeChainStepPct, MaxSurgeMultPct, SurgePurgeMinLength };
             foreach (int x in v) h = Fnv.Mix(h, (ulong)x);
             return h;
         }
@@ -428,12 +429,14 @@ namespace SurgeCore
     {
         public int[] Path;
         public int Points;
+        public int BonusPoints;
         public int ChainMult;
         public bool Purge;
         public byte PurgedColor;
         public bool InSurge;
         public int MeterAfter;
         public int[] NewNodes;
+        public int[] ClearedNodes;
     }
 
     public sealed class MatchResult
@@ -558,12 +561,25 @@ namespace SurgeCore
             }
             _lastClearMs = nowMs;
 
+            var clearedNodes = new List<int>(path);
             foreach (int n in path) Board.Cells[n] = 0;
 
-            bool purge = CountColor(color) == 0;
+            bool surgePurge = inSurge && len >= Cfg.SurgePurgeMinLength;
+            if (surgePurge)
+            {
+                for (int i = 0; i < Board.Cells.Length; i++)
+                {
+                    if (Board.Cells[i] != color) continue;
+                    Board.Cells[i] = 0;
+                    clearedNodes.Add(i);
+                }
+            }
+
+            bool purge = surgePurge || CountColor(color) == 0;
+            int bonusPoints = purge ? Cfg.PurgeBonus : 0;
             if (purge)
             {
-                Score += Cfg.PurgeBonus;
+                Score += bonusPoints;
                 PurgeCount++;
                 FreezeUntilMs = nowMs + Cfg.PurgeFreezeMs;
             }
@@ -578,9 +594,11 @@ namespace SurgeCore
 
             return new ClearResult
             {
-                Path = path.ToArray(), Points = points, ChainMult = chainMult,
+                Path = path.ToArray(), Points = points, BonusPoints = bonusPoints,
+                ChainMult = chainMult,
                 Purge = purge, PurgedColor = purge ? color : (byte)0,
-                InSurge = inSurge, MeterAfter = Meter, NewNodes = newNodes
+                InSurge = inSurge, MeterAfter = Meter, NewNodes = newNodes,
+                ClearedNodes = clearedNodes.ToArray()
             };
         }
 
@@ -681,6 +699,7 @@ namespace SurgeCore
     {
         public static string Run(int matches = 2000)
         {
+            IntentionalPurgeRule();
             var cfg = new SurgeConfig();
             var t = new Rng(0xDEADBEEFUL);
             long settles = 0, moves = 0, purges = 0, surgeClears = 0, repairs = 0;
@@ -708,6 +727,43 @@ namespace SurgeCore
             double repairRate = settles == 0 ? 0 : 100.0 * repairs / settles;
             return $"SelfTest OK: {matches} matches, {moves} clears, {purges} purges, " +
                    $"{surgeClears} surge clears, repair rate {repairRate:F3}% (target < 1%)";
+        }
+
+        static void IntentionalPurgeRule()
+        {
+            var cfg = new SurgeConfig
+            {
+                MeterGainLen3 = 100,
+                PurgeBonus = 3000,
+                SurgePurgeMinLength = 4
+            };
+            var e = new MatchEngine(0x51A6EUL, cfg);
+
+            for (int i = 0; i < e.Board.Cells.Length; i++)
+                e.Board.Cells[i] = (byte)(2 + i % 4);
+            e.Board.Cells[0] = e.Board.Cells[1] = e.Board.Cells[2] = 1;
+            e.Board.Cells[7] = 1;
+
+            ClearResult charge = e.TryCommitPath(new List<int> { 0, 1, 2 }, 100);
+            if (charge == null || !e.Banked(100) || !e.CommitSurge(110))
+                throw new Exception("intentional purge setup could not activate Surge");
+
+            for (int i = 0; i < e.Board.Cells.Length; i++)
+                e.Board.Cells[i] = (byte)(1 + i % cfg.NumColors);
+            e.Board.Cells[0] = e.Board.Cells[1] =
+                e.Board.Cells[2] = e.Board.Cells[3] = 2;
+            e.Board.Cells[e.Board.Cells.Length - 1] = 2;
+
+            int scoreBefore = e.Score;
+            ClearResult purge = e.TryCommitPath(
+                new List<int> { 0, 1, 2, 3 }, 120);
+            if (purge == null || !purge.Purge || purge.PurgedColor != 2)
+                throw new Exception("4-node Surge clear did not trigger Color Purge");
+            if (purge.ClearedNodes == null || purge.ClearedNodes.Length < 5 ||
+                Array.IndexOf(purge.ClearedNodes, e.Board.Cells.Length - 1) < 0)
+                throw new Exception("Color Purge did not report every removed capacitor");
+            if (e.Score - scoreBefore < cfg.PurgeBonus)
+                throw new Exception("Color Purge bonus was not awarded");
         }
 
         static MatchEngine Simulate(ulong seed, SurgeConfig cfg, Rng t,

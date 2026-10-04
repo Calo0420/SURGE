@@ -121,7 +121,8 @@ static class Program
                 int repairOps = eng.RepairCount - repairBefore;
                 byte[] after = eng.Board.Cells;
 
-                BoardGeometry.Diff(before, after, res.Path, res.NewNodes, delta);
+                BoardGeometry.Diff(before, after,
+                                   res.ClearedNodes ?? res.Path, res.NewNodes, delta);
                 settles++;
 
                 // When the engine did not repair, the replay must reproduce
