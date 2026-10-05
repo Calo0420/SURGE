@@ -13,9 +13,6 @@
         maven {
             url "https://maven.singular.net/" // Assets/Skillz/Editor/SkillzDependencies.xml:8
         }
-        maven {
-            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository") // Assets/Firebase/Editor/AppDependencies.xml:22, Assets/Firebase/Editor/MessagingDependencies.xml:22
-        }
         mavenLocal()
         mavenCentral()
     }
@@ -86,12 +83,10 @@ dependencies {
     implementation 'com.google.dagger:dagger:2.48.1' // Assets/Skillz/Editor/SkillzDependencies.xml:56
     implementation 'com.google.dagger:dagger-android-support:2.48.1' // Assets/Skillz/Editor/SkillzDependencies.xml:58
     implementation 'com.google.firebase:firebase-analytics:20.1.2' // Assets/Firebase/Editor/MessagingDependencies.xml:15
-    implementation 'com.google.firebase:firebase-app-unity:8.9.0' // Assets/Firebase/Editor/AppDependencies.xml:22
     implementation 'com.google.firebase:firebase-common:20.1.0' // Assets/Firebase/Editor/AppDependencies.xml:13
     implementation 'com.google.firebase:firebase-iid:21.1.0' // Assets/Firebase/Editor/MessagingDependencies.xml:17
     // implementation 'com.google.firebase:firebase-messaging:23.0.2' // Assets/Firebase/Editor/MessagingDependencies.xml:13
     implementation 'com.google.firebase:firebase-messaging:23.3.1' // Assets/Skillz/Editor/SkillzDependencies.xml:20
-    implementation 'com.google.firebase:firebase-messaging-unity:8.9.0' // Assets/Firebase/Editor/MessagingDependencies.xml:22
     implementation 'com.kochava.base:tracker:3.11.0' // Assets/Skillz/Editor/SkillzDependencies.xml:46
     implementation 'com.reactnative.picker:react-native-picker:2.6.1' // Assets/Skillz/Editor/SkillzDependencies.xml:155
     implementation 'com.reactnativepagerview:react-native-pagerview:6.7.0' // Assets/Skillz/Editor/SkillzDependencies.xml:163
@@ -146,7 +141,7 @@ android {
 
     defaultConfig {
 **DEFAULT_CONFIG_SETUP**
-        minSdk 24
+        minSdk 26
         targetSdk 34
         ndk {
             debugSymbolLevel **DEBUGSYMBOLLEVEL**

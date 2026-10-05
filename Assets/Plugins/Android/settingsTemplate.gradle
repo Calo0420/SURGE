@@ -22,11 +22,6 @@ dependencyResolutionManagement {
         maven { url 'https://nexus.skillz.com/content/groups/public/' }
         maven { url 'https://maven.singular.net/' }
         maven { url 'https://jitpack.io' }
-        maven {
-            def unityProjectPath = $/file:///**DIR_UNITYPROJECT**/$.replace("\\", "/")
-            url (unityProjectPath + "/Assets/GeneratedLocalRepo/Firebase/m2repository")
-        }
-
         flatDir {
             dirs "${project(':unityLibrary').projectDir}/libs"
         }
