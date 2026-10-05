@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SkillzSDK.Settings.SkillzSettings
   GameID: 103146
   Environment: 1
-  Orientation: 1
+  Orientation: 0
   IsDebugMode: 0
   AllowSkillzExit: 1
   HasSyncBot: 0
