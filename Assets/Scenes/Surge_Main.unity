@@ -440,6 +440,14 @@ MonoBehaviour:
   boardInput: {fileID: 519558936}
   palette: {fileID: 11400000, guid: 48efbdc5c980e493db65a1f6f94d2658, type: 2}
   vfx: {fileID: 1480906967}
+  hud: {fileID: 0}
+  musicTrack: {fileID: 8300000, guid: dca0e04d716214db38e735cfe890757a, type: 3}
+  nodeTickClip: {fileID: 8300000, guid: e4e849bbbb3a84f42bb7f69e3bef9846, type: 3}
+  rejectClip: {fileID: 8300000, guid: 01dac9de2cc2b4ee48a1769bf271ee02, type: 3}
+  comboClip: {fileID: 8300000, guid: 4766ae39c56d1425cbfa438f6118084e, type: 3}
+  heavyClearClip: {fileID: 8300000, guid: 91979694d90c54347b87267ac722e055, type: 3}
+  surgeActiveClip: {fileID: 8300000, guid: 74ef4baa38cee4a5d91b151c28b8ffc5, type: 3}
+  purgeClip: {fileID: 8300000, guid: 5ff8bfd4732b04336876a746a9a704e3, type: 3}
   devSeed: 12345
   beginMatchOnStart: 1
 --- !u!114 &519558936

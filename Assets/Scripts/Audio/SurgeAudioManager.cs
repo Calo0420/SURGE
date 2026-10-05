@@ -35,6 +35,27 @@ public sealed class SurgeAudioManager : MonoBehaviour
     private AudioSource _sfxSource;
     private float _targetPitch = 1.0f;
 
+    public void Configure(
+        AudioClip music,
+        AudioClip nodeTick,
+        AudioClip reject,
+        AudioClip combo,
+        AudioClip heavyClear,
+        AudioClip surgeActive,
+        AudioClip purge)
+    {
+        musicTrack = music;
+        nodeTickClip = nodeTick;
+        rejectClip = reject;
+        comboClip = combo;
+        heavyClearClip = heavyClear;
+        surgeActiveClip = surgeActive;
+        purgeClip = purge;
+
+        if (_musicSource != null && !_musicSource.isPlaying)
+            StartMusic();
+    }
+
     private void Awake()
     {
         if (Instance != null && Instance != this)

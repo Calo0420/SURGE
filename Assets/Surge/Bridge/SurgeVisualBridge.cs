@@ -35,6 +35,15 @@ public sealed class SurgeVisualBridge : MonoBehaviour
     [SerializeField] private VFXManager vfx;
     [SerializeField] private SurgeHUDController hud;
 
+    [Header("Audio")]
+    [SerializeField] private AudioClip musicTrack;
+    [SerializeField] private AudioClip nodeTickClip;
+    [SerializeField] private AudioClip rejectClip;
+    [SerializeField] private AudioClip comboClip;
+    [SerializeField] private AudioClip heavyClearClip;
+    [SerializeField] private AudioClip surgeActiveClip;
+    [SerializeField] private AudioClip purgeClip;
+
     [Header("Match")]
     [Tooltip("Seed used until a real SkillzSeedSource is wired. See docs/DESIGN_LINEAGE.md.")]
     [SerializeField] private ulong devSeed = 12345;
@@ -104,11 +113,20 @@ public sealed class SurgeVisualBridge : MonoBehaviour
             hapticGo.AddComponent<HapticManager>();
         }
 
-        if (SurgeAudioManager.Instance == null)
+        SurgeAudioManager audio = SurgeAudioManager.Instance;
+        if (audio == null)
         {
             GameObject audioGo = new GameObject("SurgeAudioManager");
-            audioGo.AddComponent<SurgeAudioManager>();
+            audio = audioGo.AddComponent<SurgeAudioManager>();
         }
+        audio.Configure(
+            musicTrack,
+            nodeTickClip,
+            rejectClip,
+            comboClip,
+            heavyClearClip,
+            surgeActiveClip,
+            purgeClip);
 
         if (FindAnyObjectByType<SurgeTutorialController>() == null)
         {

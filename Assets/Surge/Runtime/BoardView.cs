@@ -55,7 +55,6 @@ namespace Surge.Runtime
         Sprite _generatedCore;
         Sprite _generatedSocket;
         Sprite _generatedHalo;
-        Material _nodeMaterial;
         Coroutine _transitionRoutine;
         bool[] _transitioning;
 
@@ -206,9 +205,6 @@ namespace Surge.Runtime
             _transitioning = new bool[size * size];
             _shown = new byte[size * size];
 
-            if (_nodeMaterial == null)
-                _nodeMaterial = new Material(Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default"));
-
             Sprite coreSprite = nodeSprite != null ? nodeSprite : GeneratedCoreSprite();
             Sprite socketSprite = GeneratedSocketSprite();
             Sprite haloSprite = GeneratedHaloSprite();
@@ -231,7 +227,6 @@ namespace Surge.Runtime
                 socketSr.sprite = socketSprite;
                 socketSr.sortingLayerName = sortingLayerName;
                 socketSr.sortingOrder = sortingOrder - 1;
-                socketSr.sharedMaterial = _nodeMaterial;
                 socketSr.color = Color.white;
                 _sockets[i] = socketSr;
 
@@ -252,7 +247,6 @@ namespace Surge.Runtime
                 haloSr.sprite = haloSprite;
                 haloSr.sortingLayerName = sortingLayerName;
                 haloSr.sortingOrder = sortingOrder;
-                haloSr.sharedMaterial = _nodeMaterial;
                 haloSr.enabled = false;
                 _halos[i] = haloSr;
 
@@ -266,8 +260,6 @@ namespace Surge.Runtime
                 sr.sprite = coreSprite;
                 sr.sortingLayerName = sortingLayerName;
                 sr.sortingOrder = sortingOrder + 1;
-                sr.sharedMaterial = _nodeMaterial;
-
                 _nodes[i] = sr;
             }
         }
